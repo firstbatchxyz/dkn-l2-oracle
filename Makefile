@@ -22,6 +22,10 @@ trace:
 		RUST_LOG=none,dkn_oracle=trace cargo run
 
 ###############################################################################
+.PHONY: example-bal #  | Run balance example
+example-bal:
+		RUST_LOG=none,dkn_oracle=info cargo run --example balance
+###############################################################################
 .PHONY: build #        | Build
 build:
 		cargo build
@@ -50,6 +54,7 @@ abis:
 		cp $(ABI_SRC_PATH)/contracts/llm/LLMOracleCoordinator.sol/LLMOracleCoordinator.json $(ABI_DEST_PATH)/LLMOracleCoordinator.json
 		cp $(ABI_SRC_PATH)/contracts/llm/LLMOracleRegistry.sol/LLMOracleRegistry.json $(ABI_DEST_PATH)/LLMOracleRegistry.json
 
+###############################################################################
 # https://stackoverflow.com/a/45843594
 .PHONY: help #         | List targets
 help:                                                                                                                    

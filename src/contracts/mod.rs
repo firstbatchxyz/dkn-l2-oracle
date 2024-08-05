@@ -4,4 +4,5 @@ pub use addresses::*;
 mod interfaces;
 pub use interfaces::*;
 
-pub mod errors;
+mod errors;
+pub use errors::*;

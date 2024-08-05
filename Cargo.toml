@@ -2,21 +2,31 @@
 name = "dkn-oracle"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0"
+readme = "README.md"
 
 [dependencies]
 alloy = { version = "0.2.1", features = ["full"] }
 alloy-chains = "0.1.24"
-clap = "4.5.13"
-env_logger = "0.11.5"
-eyre = "0.6.12"
-hex = "0.4.3"
-hex-literal = "0.4.1"
-lazy_static = "1.5.0"
-log = "0.4.22"
-serde = "1.0.204"
-serde_json = "1.0.122"
 tokio = { version = "1.39.2", features = [
     "macros",
     "rt-multi-thread",
     "signal",
 ] }
+lazy_static = "1.5.0"
+
+# errors & logging
+color-eyre = "0.6.3"
+env_logger = "0.11.5"
+eyre = "0.6.12"
+log = "0.4.22"
+
+# hex, serde
+hex = "0.4.3"
+hex-literal = "0.4.1"
+serde = "1.0.204"
+serde_json = "1.0.122"
+clap = { version = "4.5.13", features = ["derive"] }
+
+[[example]]
+name = "balance"
