@@ -20,3 +20,15 @@ sol!(
     OracleCoordinator,
     "./src/contracts/abi/LLMOracleCoordinator.json"
 );
+
+sol! {
+    #[allow(missing_docs)]
+    #[derive(Debug, Default)]
+    enum TaskStatus {
+        #[default]
+        None,
+        PendingGeneration,
+        PendingValidation,
+        Completed
+    }
+}

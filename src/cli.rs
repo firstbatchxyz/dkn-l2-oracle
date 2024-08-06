@@ -1,5 +1,6 @@
 use crate::{commands, DriaOracle};
 use clap::{Parser, Subcommand};
+use eyre::Result;
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -9,6 +10,7 @@ enum Commands {
     Unregister,
     Claim,
     Rewards,
+    Run,
 }
 
 #[derive(Parser, Debug)]
@@ -19,7 +21,7 @@ struct Args {
     command: Commands,
 }
 
-pub async fn cli(node: DriaOracle) -> eyre::Result<()> {
+pub async fn cli(node: DriaOracle) -> Result<()> {
     let args = Args::parse();
 
     // TODO: add verbose option
@@ -32,8 +34,9 @@ pub async fn cli(node: DriaOracle) -> eyre::Result<()> {
         Commands::Unregister => commands::unregister(node).await?,
         Commands::Claim => commands::claim_rewards(node).await?,
         Commands::Rewards => commands::display_rewards(node).await?,
-        // TODO: respond to latest available request
+        Commands::Run => commands::run_oracle(node).await?,
         // TODO: run oracle node (subscribe)
+        // TODO: respond to latest available request
     };
 
     Ok(())

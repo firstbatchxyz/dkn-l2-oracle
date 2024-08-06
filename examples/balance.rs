@@ -1,5 +1,5 @@
-use alloy::{primitives::utils::format_ether, transports::http::reqwest::Url};
-use dkn_oracle::DriaOracle;
+use alloy::transports::http::reqwest::Url;
+use dkn_oracle::{commands, DriaOracle};
 use eyre::{Context, Result};
 use std::env;
 
@@ -15,10 +15,7 @@ async fn main() -> Result<()> {
     let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
     let node = DriaOracle::new(&private_key, rpc_url).await?;
 
-    let balances = node.balances().await?;
-    println!("Your balances:");
-    println!("{} {}", format_ether(balances[0].0), balances[0].1);
-    println!("{} {}", format_ether(balances[1].0), balances[1].1);
+    commands::display_balance(node).await?;
 
     Ok(())
 }

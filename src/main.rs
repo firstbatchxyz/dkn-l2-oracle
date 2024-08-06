@@ -1,11 +1,11 @@
 use alloy::transports::http::reqwest::Url;
 use dkn_oracle::DriaOracle;
 use dotenvy::dotenv;
-use eyre::Context;
+use eyre::{Context, Result};
 use std::env;
 
 #[tokio::main]
-async fn main() -> eyre::Result<()> {
+async fn main() -> Result<()> {
     dotenv().expect(".env file not found");
     env_logger::init();
     color_eyre::install()?;

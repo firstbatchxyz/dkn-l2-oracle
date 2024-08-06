@@ -6,4 +6,6 @@ mod contracts;
 mod node;
 pub use node::DriaOracle;
 
-mod commands;
+pub mod commands;
+
+pub mod compute;
