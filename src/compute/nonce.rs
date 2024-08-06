@@ -1,5 +1,5 @@
-use alloy::core::dyn_abi::Encoder;
 use alloy::primitives::{keccak256, Address, Bytes, U256};
+use alloy::sol_types::SolValue;
 
 /// Mines a nonce for the oracle proof-of-work.
 pub fn mine_nonce(
@@ -18,17 +18,14 @@ pub fn mine_nonce(
     log::debug!("Being mining nonce for task {}", task_id);
     loop {
         // encode packed
-        let mut encoder = Encoder::new();
-        encoder.append_packed_seq(requester.as_slice());
-        encoder.append_packed_seq(responder.as_slice());
-        encoder.append_packed_seq(input.as_ref());
-        encoder.append_packed_seq(task_id.as_le_slice());
-        let encoded_packed = encoder.finish().into_iter().flatten().collect::<Vec<u8>>();
+        let mut message = Vec::new();
+        requester.abi_encode_packed_to(&mut message);
+        responder.abi_encode_packed_to(&mut message);
+        input.abi_encode_packed_to(&mut message);
+        task_id.abi_encode_packed_to(&mut message);
 
-        // keccak256
-        let digest = keccak256(encoded_packed);
-
-        if U256::from_le_slice(digest.as_slice()) < target {
+        let digest = keccak256(message);
+        if U256::from_be_bytes(*digest) < target {
             return nonce;
         }
 

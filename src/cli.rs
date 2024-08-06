@@ -24,7 +24,7 @@ struct Args {
 pub async fn cli(node: DriaOracle) -> Result<()> {
     let args = Args::parse();
 
-    // TODO: add verbose option
+    // TODO: add validator option
 
     // TODO: add model parameter (for run & respond) only
 
