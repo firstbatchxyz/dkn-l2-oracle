@@ -32,6 +32,9 @@ pub struct DriaOracle {
     pub provider: DriaOracleProvider,
 }
 
+/// A token result is a tuple of the token amount, the token symbol and the token address.
+type TokenResult = (U256, String, Option<Address>);
+
 impl DriaOracle {
     pub async fn new(private_key: &[u8; 32], rpc_url: Url) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(private_key.into())
@@ -60,17 +63,21 @@ impl DriaOracle {
     }
 
     /// Returns ETH balance and configured token balance.
-    pub async fn balances(&self) -> Result<((U256, String), (U256, String))> {
+    pub async fn balances(&self) -> Result<[TokenResult; 2]> {
         let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
         let token_balance = token.balanceOf(self.address).call().await?._0;
         let token_symbol = token.symbol().call().await?._0;
 
         let eth_balance = self.provider.get_balance(self.address).await?;
 
-        Ok((
-            (eth_balance, "ETH".to_string()),
-            (token_balance, token_symbol),
-        ))
+        Ok([
+            (eth_balance, "ETH".to_string(), None),
+            (
+                token_balance,
+                token_symbol,
+                Some(self.contract_addresses.token),
+            ),
+        ])
     }
 
     /// Register the oracle with the registry.
@@ -144,15 +151,16 @@ impl DriaOracle {
         Ok(awaited_tx_hash)
     }
 
-    pub async fn allowance(&self, owner: Address, spender: Address) -> Result<U256> {
+    pub async fn allowance(&self, owner: Address, spender: Address) -> Result<TokenResult> {
         let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
+        let token_symbol = token.symbol().call().await?._0;
 
         let allowance = token.allowance(owner, spender).call().await?._0;
-        Ok(allowance)
+        Ok((allowance, token_symbol, Some(self.contract_addresses.token)))
     }
 
     /// Returns the amount of tokens to be staked to registry.
-    pub async fn registry_stake_amount(&self) -> Result<(U256, String)> {
+    pub async fn registry_stake_amount(&self) -> Result<TokenResult> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
         let stake_amount = registry.stakeAmount().call().await?._0;
@@ -162,7 +170,11 @@ impl DriaOracle {
         let token = ERC20::new(token_address, self.provider.clone());
         let token_symbol = token.symbol().call().await?._0;
 
-        Ok((stake_amount, token_symbol))
+        Ok((
+            stake_amount,
+            token_symbol,
+            Some(self.contract_addresses.token),
+        ))
     }
 }
 

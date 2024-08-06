@@ -17,8 +17,8 @@ async fn main() -> Result<()> {
 
     let balances = node.balances().await?;
     println!("Your balances:");
-    println!("{} {}", format_ether(balances.0 .0), balances.0 .1);
-    println!("{} {}", format_ether(balances.1 .0), balances.1 .1);
+    println!("{} {}", format_ether(balances[0].0), balances[0].1);
+    println!("{} {}", format_ether(balances[1].0), balances[1].1);
 
     Ok(())
 }
