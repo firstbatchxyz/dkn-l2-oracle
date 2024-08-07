@@ -15,6 +15,7 @@ pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHas
 
     // TODO: generate response
     let response = Bytes::from_str("hi there")?;
+    let metadata = Bytes::default();
 
     // mine nonce
     let nonce = mine_nonce(
@@ -26,7 +27,7 @@ pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHas
     );
 
     let tx_hash = node
-        .respond_generation(task_id, response, nonce)
+        .respond_generation(task_id, response, metadata, nonce)
         .await
         .wrap_err("Could not respond to generation")?;
     Ok(tx_hash)
@@ -41,6 +42,7 @@ pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHas
 
     // TODO: validate responses
     let scores = vec![];
+    let metadata = Bytes::default();
 
     // mine nonce
     let nonce = mine_nonce(
@@ -52,7 +54,7 @@ pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHas
     );
 
     let tx_hash = node
-        .respond_validation(task_id, scores, nonce)
+        .respond_validation(task_id, scores, metadata, nonce)
         .await
         .wrap_err("Could not respond to generation")?;
     Ok(tx_hash)

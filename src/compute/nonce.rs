@@ -12,10 +12,10 @@ pub fn mine_nonce(
     let big_one = U256::from(1);
     let mut nonce = U256::ZERO;
 
-    // target is 2^256 / 2^difficulty
+    // target is (2^256-1) / 2^difficulty
     let target = U256::MAX >> difficulty;
 
-    log::debug!("Being mining nonce for task {}", task_id);
+    log::debug!("Mining nonce for task {}", task_id);
     loop {
         // encode packed
         let mut message = Vec::new();

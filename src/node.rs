@@ -4,7 +4,7 @@ use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
 use alloy::{
-    network::EthereumWallet,
+    network::{Ethereum, EthereumWallet},
     primitives::{Address, TxHash, U256},
     providers::{Identity, Provider, ProviderBuilder, RootProvider},
     signers::local::PrivateKeySigner,
@@ -23,7 +23,7 @@ type DriaOracleProvider = FillProvider<
     >,
     RootProvider<Http<Client>>,
     Http<Client>,
-    alloy::network::Ethereum,
+    Ethereum,
 >;
 
 pub struct DriaOracle {
@@ -83,10 +83,10 @@ impl DriaOracle {
     ///
     /// - Checks the required approval for the registry, and approves the necessary amount.
     /// - Checks if the oracle is already registered as well.
-    pub async fn register(&self) -> Result<TxHash> {
+    pub async fn register(&self, kind: OracleKind) -> Result<TxHash> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
-        let req = registry.register();
+        let req = registry.register(kind.into());
         let tx = req
             .send()
             .await
@@ -98,10 +98,10 @@ impl DriaOracle {
         Ok(awaited_tx_hash)
     }
 
-    pub async fn unregister(&self) -> Result<TxHash> {
+    pub async fn unregister(&self, kind: OracleKind) -> Result<TxHash> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
-        let req = registry.unregister();
+        let req = registry.unregister(kind.into());
         let tx = req
             .send()
             .await
@@ -113,10 +113,13 @@ impl DriaOracle {
         Ok(awaited_tx_hash)
     }
 
-    pub async fn is_registered(&self) -> Result<bool> {
+    pub async fn is_registered(&self, kind: OracleKind) -> Result<bool> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
-        let is_registered = registry.isRegistered(self.address).call().await?;
+        let is_registered = registry
+            .isRegistered(self.address, kind.into())
+            .call()
+            .await?;
         Ok(is_registered._0)
     }
 
@@ -163,10 +166,10 @@ impl DriaOracle {
     }
 
     /// Returns the amount of tokens to be staked to registry.
-    pub async fn registry_stake_amount(&self) -> Result<TokenBalance> {
+    pub async fn registry_stake_amount(&self, kind: OracleKind) -> Result<TokenBalance> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
-        let stake_amount = registry.stakeAmount().call().await?._0;
+        let stake_amount = registry.getStakeAmount(kind.into()).call().await?._0;
 
         // return the symbol as well
         let token_address = registry.token().call().await?._0;
@@ -205,12 +208,13 @@ impl DriaOracle {
         &self,
         task_id: U256,
         response: Bytes,
+        metadata: Bytes,
         nonce: U256,
     ) -> Result<TxHash> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
-        let req = coordinator.respond(task_id, nonce, response);
+        let req = coordinator.respond(task_id, nonce, response, metadata);
         let tx = req
             .send()
             .await
@@ -226,12 +230,13 @@ impl DriaOracle {
         &self,
         task_id: U256,
         scores: Vec<U256>,
+        metadata: Bytes,
         nonce: U256,
     ) -> Result<TxHash> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
-        let req = coordinator.validate(task_id, nonce, scores);
+        let req = coordinator.validate(task_id, nonce, scores, metadata);
         let tx = req
             .send()
             .await

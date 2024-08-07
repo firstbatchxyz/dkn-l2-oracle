@@ -1,8 +1,7 @@
 use alloy::{
-    hex::FromHex,
     network::EthereumWallet,
     node_bindings::Anvil,
-    primitives::{address, keccak256, Address, Bytes, U256, U32},
+    primitives::{address, keccak256, Bytes, U256},
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
     sol,
@@ -121,6 +120,28 @@ async fn test_encode() -> Result<()> {
     local_bytes_vec.extend(some_bytes.abi_encode());
     let local_bytes = Bytes::from(local_bytes_vec);
     println!(" {:?}", local_bytes);
+
+    assert_eq!(contract_bytes, local_bytes);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_hash() -> Result<()> {
+    let anvil = Anvil::new().try_spawn()?;
+    let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
+    let wallet = EthereumWallet::from(signer);
+    let rpc_url = anvil.endpoint().parse()?;
+    let provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .wallet(wallet)
+        .on_http(rpc_url);
+    let contract = TestSolidityPacked::deploy(&provider).await?;
+
+    let some_bytes = Bytes::from_static(&hex_literal::hex!("deadbeef123deadbeef123deadbeef"));
+
+    let contract_bytes = contract.hash(some_bytes.clone()).call().await?._0;
+    let local_bytes = keccak256(some_bytes);
 
     assert_eq!(contract_bytes, local_bytes);
 

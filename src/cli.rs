@@ -24,7 +24,7 @@ struct Args {
 pub async fn cli(node: DriaOracle) -> Result<()> {
     let args = Args::parse();
 
-    // TODO: add validator option
+    // TODO: add oracle kinds for relevant commands
 
     // TODO: add model parameter (for run & respond) only
 
@@ -35,7 +35,6 @@ pub async fn cli(node: DriaOracle) -> Result<()> {
         Commands::Claim => commands::claim_rewards(node).await?,
         Commands::Rewards => commands::display_rewards(node).await?,
         Commands::Run => commands::run_oracle(node).await?,
-        // TODO: run oracle node (subscribe)
         // TODO: respond to latest available request
     };
 

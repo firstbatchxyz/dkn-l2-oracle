@@ -1,14 +1,14 @@
-use crate::DriaOracle;
+use crate::{contracts::OracleKind, DriaOracle};
 use alloy::primitives::utils::format_ether;
 use eyre::Result;
 
-pub async fn register(node: DriaOracle) -> Result<()> {
+pub async fn register(node: DriaOracle, kind: OracleKind) -> Result<()> {
     // check if registered already
-    if node.is_registered().await? {
-        log::warn!("You are already registered.");
+    if node.is_registered(kind).await? {
+        log::warn!("You are already registered as a {}.", kind);
     } else {
         // calculate the required approval for registration
-        let stake = node.registry_stake_amount().await?;
+        let stake = node.registry_stake_amount(kind).await?;
         let allowance = node
             .allowance(node.address, node.contract_addresses.registry)
             .await?;
@@ -27,18 +27,18 @@ pub async fn register(node: DriaOracle) -> Result<()> {
         }
 
         // register
-        node.register().await?;
+        node.register(kind).await?;
     }
 
     Ok(())
 }
 
-pub async fn unregister(node: DriaOracle) -> Result<()> {
+pub async fn unregister(node: DriaOracle, kind: OracleKind) -> Result<()> {
     // check if not registered anyways
-    if !node.is_registered().await? {
+    if !node.is_registered(kind).await? {
         log::warn!("You are already not registered.");
     } else {
-        node.unregister().await?;
+        node.unregister(kind).await?;
 
         // transfer all allowance from registry back to oracle
         let allowance = node
@@ -51,5 +51,11 @@ pub async fn unregister(node: DriaOracle) -> Result<()> {
         )
         .await?;
     }
+    Ok(())
+}
+
+// TODO: display all registry types
+pub async fn list_registrations(node: DriaOracle) -> Result<()> {
+    // TODO: loop over all oracle kinds and display registry status
     Ok(())
 }
