@@ -14,6 +14,16 @@ pub struct ContractAddresses {
     pub(crate) coordinator: Address,
 }
 
+impl std::fmt::Display for ContractAddresses {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Contract Addresses:\n  Token: {}\n  Registry: {}\n  Coordinator: {}",
+            self.token, self.registry, self.coordinator
+        )
+    }
+}
+
 lazy_static! {
     /// Contract addresses per chain-id.
     pub static ref ADDRESSES: HashMap<Chain, ContractAddresses> = {

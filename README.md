@@ -12,3 +12,7 @@
 </p>
 
 TODO:
+
+## Testing
+
+It's best if you launch Anvil locally in another terminal, and deploy contract separately before testing here. This is most useful when you are developing the contracts as well, and might have to re-deploy every now and then.

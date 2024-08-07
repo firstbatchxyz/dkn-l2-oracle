@@ -46,7 +46,7 @@ impl TryFrom<u8> for TaskStatus {
             1 => Ok(TaskStatus::PendingGeneration),
             2 => Ok(TaskStatus::PendingValidation),
             3 => Ok(TaskStatus::Completed),
-            _ => Err(eyre::eyre!("Invalid TaskStatus")),
+            _ => Err(eyre::eyre!("Invalid TaskStatus: {}", value)),
         }
     }
 }
@@ -61,6 +61,30 @@ pub enum OracleKind {
 impl From<OracleKind> for u8 {
     fn from(kind: OracleKind) -> u8 {
         kind as u8
+    }
+}
+
+impl TryFrom<u8> for OracleKind {
+    type Error = eyre::Error;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(OracleKind::Generator),
+            1 => Ok(OracleKind::Validator),
+            _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),
+        }
+    }
+}
+
+impl TryFrom<String> for OracleKind {
+    type Error = eyre::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "g" | "gen" | "generator" => Ok(OracleKind::Generator),
+            "v" | "val" | "validator" => Ok(OracleKind::Validator),
+            _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),
+        }
     }
 }
 

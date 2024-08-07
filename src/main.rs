@@ -24,6 +24,7 @@ async fn main() -> Result<()> {
     // create node
     let node = DriaOracle::new(&private_key, rpc_url).await?;
     log::info!("{}", node);
+    log::info!("{}", node.contract_addresses);
 
     // launch CLI
     dkn_oracle::cli(node).await?;
