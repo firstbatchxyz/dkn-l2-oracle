@@ -41,7 +41,7 @@ pub fn contract_error_report(error: Error) -> ErrReport {
                             .as_decoded_error(false)
                             .map(OracleCoordinatorErrors::into)
                     })
-                    .unwrap_or(eyre!("Unhandled contract error: {}", payload.message))
+                    .unwrap_or(eyre!("Unhandled contract error: {}", payload))
             } else {
                 eyre!("Unknown transport error: {:#?}", error)
             }
@@ -136,5 +136,32 @@ impl From<OracleCoordinatorErrors> for ErrReport {
                 eyre!("Unauthorized account: {}", e.account)
             }
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::DriaOracle;
+    use alloy::{
+        primitives::{Address, U256},
+        providers::Provider,
+    };
+
+    // const DUMMY_ADDR: Address = address!("4200000000000000000000000000000000000006");
+
+    #[tokio::test]
+    async fn test_erc20_errors() -> eyre::Result<()> {
+        dotenvy::dotenv()?;
+
+        let (node, anvil) = DriaOracle::new_on_anvil().await?;
+        println!("Anvil on: {}", anvil.endpoint());
+        assert!(node.provider.get_block_number().await? > 1);
+
+        let result = node
+            .transfer_from(node.address, Address::new([69u8; 20]), U256::MAX)
+            .await;
+        assert!(result.is_err());
+        println!("Error: {:#?}", result.err().unwrap());
+        Ok(())
     }
 }

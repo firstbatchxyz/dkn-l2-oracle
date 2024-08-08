@@ -3,7 +3,7 @@ use eyre::{eyre, Result};
 
 // TODO: add cancellation here
 /// Runs the main loop of the oracle node.
-pub async fn run_oracle(node: DriaOracle, kinds: Vec<OracleKind>) -> Result<()> {
+pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()> {
     // TODO: specify oracle kinds to run here & check registry for that
     // make sure we are registered
     // if !node.is_registered().await? {

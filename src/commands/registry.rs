@@ -2,7 +2,7 @@ use crate::{contracts::OracleKind, DriaOracle};
 use alloy::primitives::utils::format_ether;
 use eyre::Result;
 
-pub async fn register(node: DriaOracle, kind: OracleKind) -> Result<()> {
+pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
     log::info!("Registering as a {}.", kind);
     // check if registered already
     if node.is_registered(kind).await? {
@@ -36,7 +36,7 @@ pub async fn register(node: DriaOracle, kind: OracleKind) -> Result<()> {
     Ok(())
 }
 
-pub async fn unregister(node: DriaOracle, kind: OracleKind) -> Result<()> {
+pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
     // check if not registered anyways
     if !node.is_registered(kind).await? {
         log::warn!("You are already not registered.");
@@ -58,7 +58,7 @@ pub async fn unregister(node: DriaOracle, kind: OracleKind) -> Result<()> {
 }
 
 /// Displays the registration status of the oracle node for all oracle kinds.
-pub async fn registrations(node: DriaOracle) -> Result<()> {
+pub async fn display_registrations(node: &DriaOracle) -> Result<()> {
     for kind in [OracleKind::Generator, OracleKind::Validator] {
         let is_registered = node.is_registered(kind).await?;
         log::info!("{}: {}", kind, is_registered);

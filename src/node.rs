@@ -1,4 +1,5 @@
 use crate::{compute, contracts::*};
+
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -13,16 +14,21 @@ use alloy::{
 use alloy_chains::Chain;
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
+use std::env;
 use OracleCoordinator::TaskResponse;
 
+#[cfg(test)]
+use alloy::node_bindings::{Anvil, AnvilInstance};
+
+type DriaOracleProviderTransport = Http<Client>;
 // TODO: use a better type for this
 type DriaOracleProvider = FillProvider<
     JoinFill<
         JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
         WalletFiller<EthereumWallet>,
     >,
-    RootProvider<Http<Client>>,
-    Http<Client>,
+    RootProvider<DriaOracleProviderTransport>,
+    DriaOracleProviderTransport,
     Ethereum,
 >;
 
@@ -30,11 +36,56 @@ pub struct DriaOracle {
     pub wallet: EthereumWallet,
     pub address: Address,
     pub rpc_url: Url,
+    pub chain: Chain,
     pub contract_addresses: ContractAddresses,
     pub provider: DriaOracleProvider,
 }
 
 impl DriaOracle {
+    /// Creates a new Anvil instance that forks the chain at the configured RPC URL.
+    ///
+    /// Return the node instance and the Anvil instance.
+    /// Note that when Anvil instance is dropped, you will lose the forked chain.
+    #[cfg(test)]
+    pub async fn new_on_anvil() -> Result<(Self, AnvilInstance)> {
+        // parse private key
+        let private_key_hex = env::var("SECRET_KEY").wrap_err("SECRET_KEY is not set")?;
+        let private_key_decoded =
+            hex::decode(&private_key_hex).wrap_err("Could not decode private key")?;
+        let mut private_key = [0u8; 32];
+        private_key.clone_from_slice(&private_key_decoded);
+
+        // parse rpc url
+        let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
+        let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
+
+        let anvil = Anvil::new().fork(rpc_url).try_spawn()?;
+        let anvil_rpc_url = anvil.endpoint_url();
+
+        let node = Self::new(&private_key, anvil_rpc_url).await?;
+
+        Ok((node, anvil))
+    }
+
+    pub async fn new_from_env() -> Result<Self> {
+        use std::env;
+
+        // parse private key
+        let private_key_hex = env::var("SECRET_KEY").wrap_err("SECRET_KEY is not set")?;
+        let private_key_decoded =
+            hex::decode(&private_key_hex).wrap_err("Could not decode private key")?;
+        let mut private_key = [0u8; 32];
+        private_key.clone_from_slice(&private_key_decoded);
+
+        // parse rpc url
+        let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
+        let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
+
+        Self::new(&private_key, rpc_url).await
+    }
+    /// Creates a new oracle node with the given private key and connected to the chain at the given RPC URL.
+    ///
+    /// The contract addresses are chosen based on the chain id returned from the provider.
     pub async fn new(private_key: &[u8; 32], rpc_url: Url) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(private_key.into())
             .wrap_err("Could not parse private key")?;
@@ -52,13 +103,17 @@ impl DriaOracle {
         let chain = Chain::from_id(chain_id_u64);
         let contract_addresses = ADDRESSES[&chain].clone();
 
-        Ok(Self {
+        let node = Self {
             wallet,
             address,
+            chain,
             rpc_url,
             contract_addresses,
             provider,
-        })
+        };
+
+        node.check_contract_sizes().await?;
+        Ok(node)
     }
 
     /// Returns ETH balance and configured token balance.
@@ -79,10 +134,31 @@ impl DriaOracle {
         ])
     }
 
+    /// Request an oracle task. This is not done by the oracle normally, but we have it added for testing purposes.
+    pub async fn request(
+        &self,
+        input: Bytes,
+        models: Bytes,
+        difficulty: u8,
+        num_gens: u64,
+        num_vals: u64,
+    ) -> Result<TxHash> {
+        let coordinator =
+            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+
+        let req = coordinator.request(input, models, difficulty, num_gens, num_vals);
+        let tx = req
+            .send()
+            .await
+            .map_err(contract_error_report)
+            .wrap_err("Could not request task.")?;
+
+        log::info!("Hash: {:?}", tx.tx_hash());
+        let awaited_tx_hash = tx.watch().await?;
+        Ok(awaited_tx_hash)
+    }
+
     /// Register the oracle with the registry.
-    ///
-    /// - Checks the required approval for the registry, and approves the necessary amount.
-    /// - Checks if the oracle is already registered as well.
     pub async fn register(&self, kind: OracleKind) -> Result<TxHash> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
@@ -98,6 +174,7 @@ impl DriaOracle {
         Ok(awaited_tx_hash)
     }
 
+    /// Unregister from the oracle registry.
     pub async fn unregister(&self, kind: OracleKind) -> Result<TxHash> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
 
@@ -271,32 +348,34 @@ impl DriaOracle {
                         log::info!("Received event for task: {}", event.taskId);
 
                         // handle the event based on task status
-                        let result =
-                            match TaskStatus::try_from(event.statusAfter).unwrap_or_else(|e| {
+                        let response_tx_hash = match TaskStatus::try_from(event.statusAfter)
+                            .unwrap_or_else(|e| {
                                 log::error!("Could not parse task status: {}", e);
                                 TaskStatus::default()
                             }) {
-                                TaskStatus::PendingGeneration => {
-                                    compute::handle_generation(&self, event.taskId).await
-                                }
-                                TaskStatus::PendingValidation => {
-                                    compute::handle_validation(&self, event.taskId).await
-                                }
-                                _ => {
-                                    log::debug!(
-                                        "Ignoring task {} with status: {}",
-                                        event.taskId,
-                                        event.statusAfter
-                                    );
-                                    return;
-                                }
-                            };
+                            TaskStatus::PendingGeneration => {
+                                compute::handle_generation(&self, event.taskId).await
+                            }
+                            TaskStatus::PendingValidation => {
+                                compute::handle_validation(&self, event.taskId).await
+                            }
+                            _ => {
+                                log::debug!(
+                                    "Ignoring task {} with status: {}",
+                                    event.taskId,
+                                    event.statusAfter
+                                );
+                                return;
+                            }
+                        };
 
-                        // send result back
-                        match result {
-                            Ok(output) => {
-                                // TODO: send result
-                                log::info!("Task {} processed successfully.", event.taskId)
+                        match response_tx_hash {
+                            Ok(tx_hash) => {
+                                log::info!(
+                                    "Task {} processed successfully. (tx: {})",
+                                    event.taskId,
+                                    tx_hash
+                                )
                             }
                             Err(e) => log::error!("Could not process task: {:?}", e),
                         }
@@ -308,16 +387,50 @@ impl DriaOracle {
 
         Ok(())
     }
+
+    /// Checks contract sizes to ensure they are deployed.
+    ///
+    /// Returns an error if any of the contracts are not deployed.
+    pub async fn check_contract_sizes(&self) -> Result<()> {
+        let coordinator_size = self
+            .provider
+            .get_code_at(self.contract_addresses.coordinator)
+            .await?;
+        if coordinator_size.is_empty() {
+            return Err(eyre!("Coordinator contract not deployed."));
+        }
+        let registry_size = self
+            .provider
+            .get_code_at(self.contract_addresses.registry)
+            .await?;
+        if registry_size.is_empty() {
+            return Err(eyre!("Registry contract not deployed."));
+        }
+        let token_size = self
+            .provider
+            .get_code_at(self.contract_addresses.token)
+            .await?;
+        if token_size.is_empty() {
+            return Err(eyre!("Token contract not deployed."));
+        }
+
+        log::debug!("Coordinator codesize: {}", coordinator_size);
+        log::debug!("Registry codesize: {}", registry_size);
+        log::debug!("Token codesize: {}", token_size);
+
+        Ok(())
+    }
 }
 
 impl core::fmt::Display for DriaOracle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}",
+            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}\nChain: {}",
             env!("CARGO_PKG_VERSION"),
             self.address,
-            self.rpc_url
+            self.rpc_url,
+            self.chain
         )
     }
 }

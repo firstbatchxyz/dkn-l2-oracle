@@ -4,8 +4,8 @@ use eyre::Result;
 
 #[derive(Args)]
 struct KindArgs {
-    // TODO: add example & help
-    kind: Vec<String>,
+    #[arg(help = "The oracle kinds to register as.", required = true)]
+    kinds: Vec<String>,
 }
 
 #[derive(Subcommand)]
@@ -32,28 +32,35 @@ enum Commands {
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    #[arg(short, long, env = "RPC_URL")]
+    rpc_url: String,
 }
 
 pub async fn cli(node: DriaOracle) -> Result<()> {
     let matched_commands = Cli::parse().command;
 
-    // TODO: add oracle kinds for relevant commands
+    // TODO: parse params and create node here
 
     // TODO: add model parameter (for run & respond) only
 
     match matched_commands {
-        Commands::Balance => commands::display_balance(node).await?,
+        Commands::Balance => commands::display_balance(&node).await?,
         Commands::Register(arg) => {
-            commands::register(node, arg.kind[0].clone().try_into()?).await?
+            for kind in arg.kinds {
+                commands::register(&node, kind.try_into()?).await?
+            }
         }
         Commands::Unregister(arg) => {
-            commands::unregister(node, arg.kind[0].clone().try_into()?).await?
+            for kind in arg.kinds {
+                commands::unregister(&node, kind.try_into()?).await?;
+            }
         }
-        Commands::Registrations => commands::registrations(node).await?,
-        Commands::Claim => commands::claim_rewards(node).await?,
-        Commands::Rewards => commands::display_rewards(node).await?,
-        Commands::Run => commands::run_oracle(node, vec![]).await?, // TODO: !!
-                                                                    // TODO: respond to latest available request
+        Commands::Registrations => commands::display_registrations(&node).await?,
+        Commands::Claim => commands::claim_rewards(&node).await?,
+        Commands::Rewards => commands::display_rewards(&node).await?,
+        Commands::Run => commands::run_oracle(&node, vec![]).await?, // TODO: !!
+                                                                     // TODO: respond to latest available request
     };
 
     Ok(())

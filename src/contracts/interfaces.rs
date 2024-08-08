@@ -1,10 +1,19 @@
 use alloy::sol;
 
+// OpenZepeplin ERC20
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
     ERC20,
     "./src/contracts/abi/ERC20.json"
+);
+
+// WETH (Wrapped Ether)
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    WETH,
+    "./src/contracts/abi/IWETH9.json"
 );
 
 sol!(

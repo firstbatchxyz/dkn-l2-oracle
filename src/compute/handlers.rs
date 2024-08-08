@@ -24,7 +24,8 @@ pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHas
         node.address,
         task.input,
         task_id,
-    );
+    )
+    .0;
 
     let tx_hash = node
         .respond_generation(task_id, response, metadata, nonce)
@@ -51,7 +52,8 @@ pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHas
         node.address,
         task.input,
         task_id,
-    );
+    )
+    .0;
 
     let tx_hash = node
         .respond_validation(task_id, scores, metadata, nonce)

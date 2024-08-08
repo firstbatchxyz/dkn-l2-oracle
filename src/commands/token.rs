@@ -2,7 +2,7 @@ use crate::DriaOracle;
 use eyre::Result;
 
 /// Display token balances
-pub async fn display_balance(node: DriaOracle) -> Result<()> {
+pub async fn display_balance(node: &DriaOracle) -> Result<()> {
     let balances = node.balances().await?;
 
     log::info!("Your balances:");
@@ -14,7 +14,7 @@ pub async fn display_balance(node: DriaOracle) -> Result<()> {
 }
 
 /// Show the amount of claimable rewards
-pub async fn display_rewards(node: DriaOracle) -> Result<()> {
+pub async fn display_rewards(node: &DriaOracle) -> Result<()> {
     let allowance = node
         .allowance(node.contract_addresses.coordinator, node.address)
         .await?;
@@ -30,7 +30,7 @@ pub async fn display_rewards(node: DriaOracle) -> Result<()> {
 }
 
 /// Claim rewards
-pub async fn claim_rewards(node: DriaOracle) -> Result<()> {
+pub async fn claim_rewards(node: &DriaOracle) -> Result<()> {
     // get allowance
     let allowance = node
         .allowance(node.contract_addresses.coordinator, node.address)
