@@ -12,3 +12,5 @@ pub mod commands;
 
 mod configurations;
 pub use configurations::DriaOracleConfig;
+
+pub mod data;
