@@ -1,5 +1,6 @@
-use crate::{compute, contracts::*};
+use crate::{compute, contracts::*, DriaOracleConfig};
 
+use alloy::network::NetworkWallet;
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -20,8 +21,8 @@ use OracleCoordinator::TaskResponse;
 #[cfg(test)]
 use alloy::node_bindings::{Anvil, AnvilInstance};
 
+// TODO: use a better type for these
 type DriaOracleProviderTransport = Http<Client>;
-// TODO: use a better type for this
 type DriaOracleProvider = FillProvider<
     JoinFill<
         JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
@@ -33,10 +34,8 @@ type DriaOracleProvider = FillProvider<
 >;
 
 pub struct DriaOracle {
-    pub wallet: EthereumWallet,
+    pub config: DriaOracleConfig,
     pub address: Address,
-    pub rpc_url: Url,
-    pub chain: Chain,
     pub contract_addresses: ContractAddresses,
     pub provider: DriaOracleProvider,
 }
@@ -47,54 +46,24 @@ impl DriaOracle {
     /// Return the node instance and the Anvil instance.
     /// Note that when Anvil instance is dropped, you will lose the forked chain.
     #[cfg(test)]
-    pub async fn new_on_anvil() -> Result<(Self, AnvilInstance)> {
-        // parse private key
-        let private_key_hex = env::var("SECRET_KEY").wrap_err("SECRET_KEY is not set")?;
-        let private_key_decoded =
-            hex::decode(&private_key_hex).wrap_err("Could not decode private key")?;
-        let mut private_key = [0u8; 32];
-        private_key.clone_from_slice(&private_key_decoded);
-
-        // parse rpc url
-        let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
-        let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
-
-        let anvil = Anvil::new().fork(rpc_url).try_spawn()?;
+    pub async fn new_anvil(mut config: DriaOracleConfig) -> Result<(Self, AnvilInstance)> {
+        let anvil = Anvil::new().fork(config.rpc_url.clone()).try_spawn()?;
         let anvil_rpc_url = anvil.endpoint_url();
 
-        let node = Self::new(&private_key, anvil_rpc_url).await?;
+        let config = config.with_rpc_url(anvil_rpc_url);
+        let node = Self::new(config.to_owned()).await?;
 
         Ok((node, anvil))
     }
 
-    pub async fn new_from_env() -> Result<Self> {
-        use std::env;
-
-        // parse private key
-        let private_key_hex = env::var("SECRET_KEY").wrap_err("SECRET_KEY is not set")?;
-        let private_key_decoded =
-            hex::decode(&private_key_hex).wrap_err("Could not decode private key")?;
-        let mut private_key = [0u8; 32];
-        private_key.clone_from_slice(&private_key_decoded);
-
-        // parse rpc url
-        let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
-        let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
-
-        Self::new(&private_key, rpc_url).await
-    }
     /// Creates a new oracle node with the given private key and connected to the chain at the given RPC URL.
     ///
     /// The contract addresses are chosen based on the chain id returned from the provider.
-    pub async fn new(private_key: &[u8; 32], rpc_url: Url) -> Result<Self> {
-        let signer = PrivateKeySigner::from_bytes(private_key.into())
-            .wrap_err("Could not parse private key")?;
-        let address = signer.address();
-        let wallet = EthereumWallet::from(signer);
+    pub async fn new(config: DriaOracleConfig) -> Result<Self> {
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
-            .wallet(wallet.clone())
-            .on_http(rpc_url.clone());
+            .wallet(config.wallet.clone())
+            .on_http(config.rpc_url.clone());
 
         let chain_id_u64 = provider
             .get_chain_id()
@@ -104,18 +73,28 @@ impl DriaOracle {
         let contract_addresses = ADDRESSES[&chain].clone();
 
         let node = Self {
-            wallet,
-            address,
-            chain,
-            rpc_url,
+            address: config.address.clone(),
+            config,
             contract_addresses,
             provider,
         };
 
         node.check_contract_sizes().await?;
+        node.check_contract_tokens().await?;
+
         Ok(node)
     }
 
+    /// Returns the connected chain.
+    pub async fn get_chain(&self) -> Result<Chain> {
+        let chain_id_u64 = self
+            .provider
+            .get_chain_id()
+            .await
+            .wrap_err("Could not get chain id")?;
+
+        Ok(Chain::from_id(chain_id_u64))
+    }
     /// Returns ETH balance and configured token balance.
     pub async fn balances(&self) -> Result<[TokenBalance; 2]> {
         let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
@@ -420,17 +399,37 @@ impl DriaOracle {
 
         Ok(())
     }
+
+    /// Ensures that the registry & coordinator tokens match the expected token.
+    pub async fn check_contract_tokens(&self) -> Result<()> {
+        let coordinator =
+            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+
+        // check registry
+        let registry_token = registry.token().call().await?._0;
+        if registry_token != self.contract_addresses.token {
+            return Err(eyre!("Registry token does not match."));
+        }
+
+        // check coordinator
+        let coordinator_token = coordinator.feeToken().call().await?._0;
+        if coordinator_token != self.contract_addresses.token {
+            return Err(eyre!("Registry token does not match."));
+        }
+
+        Ok(())
+    }
 }
 
 impl core::fmt::Display for DriaOracle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}\nChain: {}",
+            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}",
             env!("CARGO_PKG_VERSION"),
             self.address,
-            self.rpc_url,
-            self.chain
+            self.config.rpc_url,
         )
     }
 }

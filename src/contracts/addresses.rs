@@ -9,8 +9,11 @@ use std::collections::HashMap;
 /// Contract addresses.
 #[derive(Debug, Clone)]
 pub struct ContractAddresses {
+    /// Token used within the registry and coordinator.
     pub(crate) token: Address,
+    /// Oracle registry.
     pub(crate) registry: Address,
+    /// Oracle coordinator.
     pub(crate) coordinator: Address,
 }
 
@@ -44,8 +47,8 @@ lazy_static! {
             BaseSepolia.into(),
             ContractAddresses {
                 token: address!("4200000000000000000000000000000000000006"),
-                registry: address!("0877022A137b8E8CE1C3020B9f047651dD02E37B"),
-                coordinator: address!("EdC11Fe8a3fb4B8898c1ed988C5AB926BeA19B9C"),
+                registry: address!("8D09081F1620A70e9102c3E331EF3749A56EA5F0"),
+                coordinator: address!("303c4aD9DA1756f34a2CD1d20926B48780A3b9DE"),
             },
         );
 

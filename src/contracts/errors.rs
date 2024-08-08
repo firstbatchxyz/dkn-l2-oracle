@@ -141,27 +141,30 @@ impl From<OracleCoordinatorErrors> for ErrReport {
 
 #[cfg(test)]
 mod tests {
-    use crate::DriaOracle;
-    use alloy::{
-        primitives::{Address, U256},
-        providers::Provider,
-    };
-
-    // const DUMMY_ADDR: Address = address!("4200000000000000000000000000000000000006");
+    use crate::{contracts::OracleKind, DriaOracle, DriaOracleConfig};
+    use alloy::providers::Provider;
 
     #[tokio::test]
-    async fn test_erc20_errors() -> eyre::Result<()> {
-        dotenvy::dotenv()?;
-
-        let (node, anvil) = DriaOracle::new_on_anvil().await?;
-        println!("Anvil on: {}", anvil.endpoint());
+    async fn test_registry_error() -> eyre::Result<()> {
+        let config = DriaOracleConfig::new_from_env()?
+            .enable_logs()
+            .enable_color_eyre()?;
+        let (node, _anvil) = DriaOracle::new_anvil(config).await?;
         assert!(node.provider.get_block_number().await? > 1);
 
-        let result = node
-            .transfer_from(node.address, Address::new([69u8; 20]), U256::MAX)
-            .await;
+        // tries to register if registered, or opposite, to trigger an error
+        let kind = OracleKind::Generator;
+        let result = if node.is_registered(kind).await? {
+            node.register(kind).await
+        } else {
+            node.unregister(kind).await
+        };
         assert!(result.is_err());
-        println!("Error: {:#?}", result.err().unwrap());
+
+        // both errors include the node address in their message, which we look for here:
+        let err = result.unwrap_err();
+        err.to_string().contains(&node.address.to_string());
+
         Ok(())
     }
 }
