@@ -37,9 +37,10 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
 }
 
 pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
+    log::info!("Unregistering as {}.", kind);
     // check if not registered anyways
     if !node.is_registered(kind).await? {
-        log::warn!("You are already not registered.");
+        log::warn!("You are already not registered as a {}.", kind);
     } else {
         node.unregister(kind).await?;
 

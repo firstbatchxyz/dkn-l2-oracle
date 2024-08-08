@@ -1,5 +1,5 @@
 use crate::{contracts::OracleKind, DriaOracle};
-use eyre::{eyre, Result};
+use eyre::Result;
 
 // TODO: add cancellation here
 /// Runs the main loop of the oracle node.

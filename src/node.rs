@@ -1,6 +1,5 @@
 use crate::{compute, contracts::*, DriaOracleConfig};
 
-use alloy::network::NetworkWallet;
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -9,8 +8,7 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{Address, TxHash, U256},
     providers::{Identity, Provider, ProviderBuilder, RootProvider},
-    signers::local::PrivateKeySigner,
-    transports::http::{reqwest::Url, Client, Http},
+    transports::http::{Client, Http},
 };
 use alloy_chains::Chain;
 use eyre::{eyre, Context, Result};
