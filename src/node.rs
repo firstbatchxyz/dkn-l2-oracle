@@ -1,5 +1,6 @@
 use crate::{compute, contracts::*, DriaOracleConfig};
 
+use alloy::contract::EventPoller;
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -14,7 +15,9 @@ use alloy_chains::Chain;
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 use std::env;
-use OracleCoordinator::TaskResponse;
+use OracleCoordinator::{
+    getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
+};
 
 #[cfg(test)]
 use alloy::node_bindings::{Anvil, AnvilInstance};
@@ -303,66 +306,13 @@ impl DriaOracle {
     }
 
     /// Subscribes to events & processes tasks.
-    pub async fn process_tasks(&self) -> Result<()> {
+    pub async fn subscribe_to_tasks(
+        &self,
+    ) -> Result<EventPoller<DriaOracleProviderTransport, StatusUpdate>> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
-        let events = coordinator.StatusUpdate_filter().watch().await?;
-
-        log::info!(
-            "Subscribed to LLMOracleCoordinator at {}",
-            self.contract_addresses.coordinator
-        );
-        events
-            .into_stream()
-            .for_each(|log| async {
-                match log {
-                    Ok((event, log)) => {
-                        log::debug!(
-                            "Received event for tx: {}",
-                            log.transaction_hash.unwrap_or_default()
-                        );
-                        log::info!("Received event for task: {}", event.taskId);
-
-                        // handle the event based on task status
-                        let response_tx_hash = match TaskStatus::try_from(event.statusAfter)
-                            .unwrap_or_else(|e| {
-                                log::error!("Could not parse task status: {}", e);
-                                TaskStatus::default()
-                            }) {
-                            TaskStatus::PendingGeneration => {
-                                compute::handle_generation(&self, event.taskId).await
-                            }
-                            TaskStatus::PendingValidation => {
-                                compute::handle_validation(&self, event.taskId).await
-                            }
-                            _ => {
-                                log::debug!(
-                                    "Ignoring task {} with status: {}",
-                                    event.taskId,
-                                    event.statusAfter
-                                );
-                                return;
-                            }
-                        };
-
-                        match response_tx_hash {
-                            Ok(tx_hash) => {
-                                log::info!(
-                                    "Task {} processed successfully. (tx: {})",
-                                    event.taskId,
-                                    tx_hash
-                                )
-                            }
-                            Err(e) => log::error!("Could not process task: {:?}", e),
-                        }
-                    }
-                    Err(e) => log::error!("Could not handle event: {:?}", e),
-                }
-            })
-            .await;
-
-        Ok(())
+        Ok(coordinator.StatusUpdate_filter().watch().await?)
     }
 
     /// Checks contract sizes to ensure they are deployed.
@@ -417,6 +367,28 @@ impl DriaOracle {
         }
 
         Ok(())
+    }
+
+    pub async fn get_task(
+        &self,
+        task_id: U256,
+    ) -> Result<(requestsReturn, getResponsesReturn, getValidationsReturn)> {
+        let coordinator =
+            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+
+        // check if task id is valid
+        if task_id.is_zero() {
+            return Err(eyre!("Task ID must be non-zero."));
+        } else if task_id >= coordinator.nextTaskId().call().await?._0 {
+            return Err(eyre!("Task with id {} has not been created yet.", task_id));
+        }
+
+        // get task info
+        let request = coordinator.requests(task_id).call().await?;
+        let responses = coordinator.getResponses(task_id).call().await?;
+        let validations = coordinator.getValidations(task_id).call().await?;
+
+        Ok((request, responses, validations))
     }
 }
 

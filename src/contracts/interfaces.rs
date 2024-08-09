@@ -1,4 +1,5 @@
-use alloy::sol;
+use alloy::{primitives::Bytes, sol};
+use eyre::{Context, Result};
 
 // OpenZepeplin ERC20
 sol!(
@@ -21,6 +22,11 @@ sol!(
     OracleCoordinator,
     "./src/contracts/abi/LLMOracleCoordinator.json"
 );
+
+/// Small utility to convert bytes to string.
+pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
+    String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
+}
 
 /// `TaskStatus` as it appears within the coordinator.
 #[derive(Debug, Clone, Copy, Default)]
@@ -52,8 +58,19 @@ impl TryFrom<u8> for TaskStatus {
     }
 }
 
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskStatus::None => write!(f, "None"),
+            TaskStatus::PendingGeneration => write!(f, "Pending Generation"),
+            TaskStatus::PendingValidation => write!(f, "Pending Validation"),
+            TaskStatus::Completed => write!(f, "Completed"),
+        }
+    }
+}
+
 /// `OracleKind` as it appears within the registry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OracleKind {
     Generator,
     Validator,
@@ -81,7 +98,15 @@ impl TryFrom<String> for OracleKind {
     type Error = eyre::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+        Self::try_from(value.as_str())
+    }
+}
+
+impl TryFrom<&str> for OracleKind {
+    type Error = eyre::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
             "g" | "gen" | "generator" => Ok(OracleKind::Generator),
             "v" | "val" | "validator" => Ok(OracleKind::Validator),
             _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),

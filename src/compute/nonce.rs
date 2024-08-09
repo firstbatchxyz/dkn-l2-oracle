@@ -6,10 +6,10 @@ use alloy::sol_types::SolValue;
 /// Returns (nonce, candidate, target).
 pub fn mine_nonce(
     difficulty: u8,
-    requester: Address,
-    responder: Address,
-    input: Bytes,
-    task_id: U256,
+    requester: &Address,
+    responder: &Address,
+    input: &Bytes,
+    task_id: &U256,
 ) -> (U256, U256, U256) {
     let big_one = U256::from(1);
     let mut nonce = U256::ZERO;
@@ -52,7 +52,7 @@ mod tests {
         let task_id = U256::from(0x1234);
         let difficulty = 2;
 
-        let (nonce, _, _) = mine_nonce(difficulty, requester, responder, input, task_id);
+        let (nonce, _, _) = mine_nonce(difficulty, &requester, &responder, &input, &task_id);
         assert!(!nonce.is_zero());
 
         // println!("Nonce: {}", nonce);
