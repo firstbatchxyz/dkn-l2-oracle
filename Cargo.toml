@@ -34,6 +34,8 @@ clap = { version = "4.5.13", features = ["derive", "env"] }
 dotenvy = "0.15.7"
 futures-util = "0.3.30"
 reqwest = "0.12.5"
+async-trait = "0.1.81"
+bytes = "1.7.1"
 
 [[example]]
 name = "balance"

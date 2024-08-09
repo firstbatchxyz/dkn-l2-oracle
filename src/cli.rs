@@ -1,21 +1,28 @@
-use crate::{commands, DriaOracle};
-use clap::{Args, Parser, Subcommand};
+use crate::{commands, contracts::OracleKind, DriaOracle};
+use alloy::primitives::U256;
+use clap::{Parser, Subcommand};
 use eyre::Result;
 
-#[derive(Args)]
-struct KindArgs {
-    #[arg(help = "The oracle kinds to register as.", required = true)]
-    kinds: Vec<String>,
+/// Parses a str to `OracleKind`.
+fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
+    OracleKind::try_from(value)
 }
 
+// https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes
 #[derive(Subcommand)]
 enum Commands {
     /// See the current balance of the oracle node.
     Balance,
     /// Register oracle as a specific oracle kind.
-    Register(KindArgs),
+    Register {
+        #[arg(help = "The oracle kinds to register as.", required = true, value_parser=parse_oracle_kind)]
+        kinds: Vec<OracleKind>,
+    },
     /// Unregister oracle as a specific oracle kind.
-    Unregister(KindArgs),
+    Unregister {
+        #[arg(help = "The oracle kinds to unregister as.", required = true, value_parser=parse_oracle_kind)]
+        kinds: Vec<OracleKind>,
+    },
     /// See all registrations.
     Registrations,
     /// Claim rewards from the coordinator.
@@ -23,7 +30,14 @@ enum Commands {
     /// See claimable rewards from the coordinator.
     Rewards,
     /// Launch the oracle node.
-    Run,
+    Run {
+        #[arg(help = "The oracle kinds to handle tasks as.", required = true, value_parser=parse_oracle_kind)]
+        kinds: Vec<OracleKind>,
+        #[arg(short, long, help = "The models to serve.", required = true)]
+        models: Vec<String>,
+    },
+    /// View status of a given task.
+    View { task_id: U256 },
 }
 
 #[derive(Parser)]
@@ -42,25 +56,24 @@ pub async fn cli(node: DriaOracle) -> Result<()> {
 
     // TODO: parse params and create node here
 
-    // TODO: add model parameter (for run & respond) only
-
     match matched_commands {
         Commands::Balance => commands::display_balance(&node).await?,
-        Commands::Register(arg) => {
-            for kind in arg.kinds {
-                commands::register(&node, kind.try_into()?).await?
+        Commands::Register { kinds } => {
+            for kind in kinds {
+                commands::register(&node, kind).await?
             }
         }
-        Commands::Unregister(arg) => {
-            for kind in arg.kinds {
-                commands::unregister(&node, kind.try_into()?).await?;
+        Commands::Unregister { kinds } => {
+            for kind in kinds {
+                commands::unregister(&node, kind).await?;
             }
         }
         Commands::Registrations => commands::display_registrations(&node).await?,
         Commands::Claim => commands::claim_rewards(&node).await?,
         Commands::Rewards => commands::display_rewards(&node).await?,
-        Commands::Run => commands::run_oracle(&node, vec![]).await?, // TODO: !!
-                                                                     // TODO: respond to latest available request
+        Commands::Run { kinds, models } => commands::run_oracle(&node, kinds).await?,
+        Commands::View { task_id } => commands::view_task(&node, task_id).await?,
+        // TODO: add "respond to latest available request" command
     };
 
     Ok(())

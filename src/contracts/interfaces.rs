@@ -53,7 +53,7 @@ impl TryFrom<u8> for TaskStatus {
 }
 
 /// `OracleKind` as it appears within the registry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OracleKind {
     Generator,
     Validator,
@@ -81,7 +81,15 @@ impl TryFrom<String> for OracleKind {
     type Error = eyre::Error;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        match value.as_str() {
+        Self::try_from(value.as_str())
+    }
+}
+
+impl TryFrom<&str> for OracleKind {
+    type Error = eyre::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
             "g" | "gen" | "generator" => Ok(OracleKind::Generator),
             "v" | "val" | "validator" => Ok(OracleKind::Validator),
             _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),

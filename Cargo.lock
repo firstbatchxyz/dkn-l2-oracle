@@ -1263,6 +1263,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "alloy-chains",
+ "async-trait",
+ "bytes",
  "clap",
  "color-eyre",
  "dotenvy",
