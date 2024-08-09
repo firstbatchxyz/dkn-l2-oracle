@@ -1,34 +1,41 @@
-use std::str::FromStr;
-
-use crate::DriaOracle;
+use super::WorkflowsExt;
+use crate::{contracts::bytes_to_string, DriaOracle};
 use alloy::primitives::{Bytes, TxHash, U256};
 use eyre::{Context, Result};
+use ollama_workflows::{Executor, Model};
+use std::str::FromStr;
 
 use super::mine_nonce;
 
 /// Handles a generation request.
 pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHash> {
-    let task = node
+    let request = node
         .get_task_request(task_id)
         .await
         .wrap_err("Could not get task")?;
 
-    // TODO: generate response
-    let response = Bytes::from_str("hi there")?;
-    let metadata = Bytes::default();
+    // create executor
+    let executor = Executor::new(Model::GPT4oMini);
+
+    // parse input
+    let input_str = bytes_to_string(&request.input).wrap_err("Could not read input")?;
+    let (output_str, metadata_str) = executor.generation(input_str).await?;
+    let output = Bytes::from_str(&output_str)?;
+    let metadata = Bytes::from_str(&metadata_str)?;
 
     // mine nonce
     let nonce = mine_nonce(
-        task.difficulty,
-        task.requester,
-        node.address,
-        task.input,
-        task_id,
+        request.difficulty,
+        &request.requester,
+        &node.address,
+        &request.input,
+        &task_id,
     )
     .0;
 
+    // respond
     let tx_hash = node
-        .respond_generation(task_id, response, metadata, nonce)
+        .respond_generation(task_id, output, metadata, nonce)
         .await
         .wrap_err("Could not respond to generation")?;
     Ok(tx_hash)
@@ -36,7 +43,7 @@ pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHas
 
 /// Handles a validation request.
 pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHash> {
-    let task = node
+    let request = node
         .get_task_request(task_id)
         .await
         .wrap_err("Could not get task")?;
@@ -47,11 +54,11 @@ pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHas
 
     // mine nonce
     let nonce = mine_nonce(
-        task.difficulty,
-        task.requester,
-        node.address,
-        task.input,
-        task_id,
+        request.difficulty,
+        &request.requester,
+        &node.address,
+        &request.input,
+        &task_id,
     )
     .0;
 

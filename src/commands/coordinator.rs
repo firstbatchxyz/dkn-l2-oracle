@@ -1,30 +1,29 @@
 use crate::{
     compute,
-    contracts::{OracleKind, TaskStatus},
+    contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
-use alloy::primitives::U256;
-use eyre::{eyre, Result};
+use alloy::primitives::{Bytes, U256};
+use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 
 // TODO: add cancellation here
 /// Runs the main loop of the oracle node.
 pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()> {
-    // make sure we are registered
+    // make sure we are registered to required kinds
     for kind in &kinds {
         if !node.is_registered(*kind).await? {
             return Err(eyre!("You need to register as {} first.", kind))?;
         }
     }
+    let is_generator = kinds.contains(&OracleKind::Generator);
+    let is_validator = kinds.contains(&OracleKind::Validator);
 
     let task_poller = node.subscribe_to_tasks().await?;
     log::info!(
         "Subscribed to LLMOracleCoordinator at {}",
         node.contract_addresses.coordinator
     );
-
-    let is_generator = kinds.contains(&OracleKind::Generator);
-    let is_validator = kinds.contains(&OracleKind::Validator);
 
     task_poller
         .into_stream()
@@ -91,6 +90,35 @@ pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
 
     let (request, responses, validations) = node.get_task(task_id).await?;
 
-    log::info!("Request: {}", request.status);
+    log::info!("Request Information:");
+    log::info!("Requester: {}", request.requester);
+    log::info!("Status:    {}", TaskStatus::try_from(request.status)?);
+    log::info!("Input:     {}", bytes_to_string(&request.input)?);
+    log::info!("Models:    {}", bytes_to_string(&request.models)?);
+
+    log::info!("Responses:");
+    if responses._0.is_empty() {
+        log::warn!("There are no responses yet.");
+    } else {
+        for (idx, response) in responses._0.iter().enumerate() {
+            log::info!("Response  #{}", idx);
+            log::info!("Output:    {}", bytes_to_string(&response.output)?);
+            log::info!("Metadata:  {}", bytes_to_string(&response.metadata)?);
+            log::info!("Generator: {}", response.responder);
+        }
+    }
+
+    log::info!("Validations:");
+    if validations._0.is_empty() {
+        log::warn!("There are no validations yet.");
+    } else {
+        for (idx, validation) in validations._0.iter().enumerate() {
+            log::info!("Validation #{}", idx);
+            log::info!("Scores:     {:?}", validation.scores);
+            log::info!("Metadata:   {}", bytes_to_string(&validation.metadata)?);
+            log::info!("Validator:  {}", validation.validator);
+        }
+    }
+
     Ok(())
 }

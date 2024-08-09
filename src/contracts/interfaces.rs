@@ -1,4 +1,5 @@
-use alloy::sol;
+use alloy::{primitives::Bytes, sol};
+use eyre::{Context, Result};
 
 // OpenZepeplin ERC20
 sol!(
@@ -21,6 +22,11 @@ sol!(
     OracleCoordinator,
     "./src/contracts/abi/LLMOracleCoordinator.json"
 );
+
+/// Small utility to convert bytes to string.
+pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
+    String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
+}
 
 /// `TaskStatus` as it appears within the coordinator.
 #[derive(Debug, Clone, Copy, Default)]
@@ -48,6 +54,17 @@ impl TryFrom<u8> for TaskStatus {
             2 => Ok(TaskStatus::PendingValidation),
             3 => Ok(TaskStatus::Completed),
             _ => Err(eyre::eyre!("Invalid TaskStatus: {}", value)),
+        }
+    }
+}
+
+impl std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskStatus::None => write!(f, "None"),
+            TaskStatus::PendingGeneration => write!(f, "Pending Generation"),
+            TaskStatus::PendingValidation => write!(f, "Pending Validation"),
+            TaskStatus::Completed => write!(f, "Completed"),
         }
     }
 }
