@@ -1,15 +1,20 @@
 use crate::{
-    compute,
+    compute::{self, ModelConfig},
     contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
 use alloy::primitives::U256;
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
+use ollama_workflows::Model;
 
 // TODO: add cancellation here
 /// Runs the main loop of the oracle node.
-pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()> {
+pub async fn run_oracle(
+    node: &DriaOracle,
+    kinds: Vec<OracleKind>,
+    models: Vec<Model>,
+) -> Result<()> {
     // make sure we are registered to required kinds
     for kind in &kinds {
         if !node.is_registered(*kind).await? {
@@ -18,6 +23,9 @@ pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()>
     }
     let is_generator = kinds.contains(&OracleKind::Generator);
     let is_validator = kinds.contains(&OracleKind::Validator);
+
+    // prepare model config
+    let model_config = ModelConfig::new(models);
 
     let task_poller = node.subscribe_to_tasks().await?;
     log::info!(
@@ -44,7 +52,7 @@ pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()>
                         }) {
                         TaskStatus::PendingGeneration => {
                             if is_generator {
-                                compute::handle_generation(node, event.taskId).await
+                                compute::handle_generation(node, &model_config, event.taskId).await
                             } else {
                                 return;
                             }

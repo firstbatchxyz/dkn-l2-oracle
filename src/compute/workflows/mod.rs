@@ -6,10 +6,12 @@ use ollama_workflows::{Entry, Workflow};
 use serde_json::json;
 
 mod executor;
-mod models;
-mod preset;
-
 pub use executor::WorkflowsExt;
+
+mod models;
+pub use models::ModelConfig;
+
+mod preset;
 
 /// Utility to parse comma-separated string values, mostly read from the environment.
 /// - Trims `"` from both ends at the start

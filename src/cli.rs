@@ -1,11 +1,17 @@
 use crate::{commands, contracts::OracleKind, DriaOracle};
 use alloy::primitives::U256;
 use clap::{Parser, Subcommand};
-use eyre::Result;
+use eyre::{eyre, Result};
+use ollama_workflows::Model;
 
 /// `value_parser` to parse a `str` to `OracleKind`.
 fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
     OracleKind::try_from(value)
+}
+
+/// `value_parser` to parse a `str` to `OracleKind`.
+fn parse_model(value: &str) -> Result<Model> {
+    Model::try_from(value.to_string()).map_err(|e| eyre!(e))
 }
 
 // https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes
@@ -33,8 +39,8 @@ enum Commands {
     Run {
         #[arg(help = "The oracle kinds to handle tasks as.", required = true, value_parser=parse_oracle_kind)]
         kinds: Vec<OracleKind>,
-        #[arg(short, long, help = "The models to serve.", required = true)]
-        models: Vec<String>,
+        #[arg(short, long, help = "The models to serve.", required = true, value_parser=parse_model)]
+        models: Vec<Model>,
     },
     /// View status of a given task.
     View { task_id: U256 },
@@ -71,7 +77,7 @@ pub async fn cli(node: DriaOracle) -> Result<()> {
         Commands::Registrations => commands::display_registrations(&node).await?,
         Commands::Claim => commands::claim_rewards(&node).await?,
         Commands::Rewards => commands::display_rewards(&node).await?,
-        Commands::Run { kinds, models } => commands::run_oracle(&node, kinds).await?,
+        Commands::Run { kinds, models } => commands::run_oracle(&node, kinds, models).await?,
         Commands::View { task_id } => commands::view_task(&node, task_id).await?,
         // TODO: add "respond to latest available request" command
     };

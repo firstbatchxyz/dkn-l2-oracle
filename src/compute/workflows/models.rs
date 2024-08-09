@@ -21,6 +21,13 @@ impl std::fmt::Display for ModelConfig {
 }
 
 impl ModelConfig {
+    /// Creates a new config with the given list of models.
+    pub fn new(models: Vec<Model>) -> Self {
+        Self {
+            models: models.into_iter().map(|m| (m.clone().into(), m)).collect(),
+        }
+    }
+
     /// Parses Ollama-Workflows compatible models from a comma-separated values string.
     pub fn new_from_csv(input: Option<String>) -> Self {
         let models_str = split_comma_separated(input);
@@ -39,6 +46,7 @@ impl ModelConfig {
         Self { models }
     }
 
+    /// Returns the list of models in the config that match the given provider.
     pub fn get_models_for_provider(&self, provider: ModelProvider) -> Vec<Model> {
         self.models
             .iter()
@@ -54,12 +62,27 @@ impl ModelConfig {
 
     /// Given a raw model name or provider (as a string), returns the first matching model & provider.
     ///
-    /// If this is a model and is supported by this node, it is returned directly.
-    /// If this is a provider, the first matching model in the node config is returned.
+    /// - If input is `*` or `all`, a random model is returned.
+    /// - if input is `!` the first model is returned.
+    /// - If input is a model and is supported by this node, it is returned directly.
+    /// - If input is a provider, the first matching model in the node config is returned.
     ///
     /// If there are no matching models with this logic, an error is returned.
     pub fn get_matching_model(&self, model_or_provider: String) -> Result<(ModelProvider, Model)> {
-        if let Ok(provider) = ModelProvider::try_from(model_or_provider.clone()) {
+        if model_or_provider == "*" || model_or_provider == "all" {
+            // return a random model
+            self.models
+                .iter()
+                .choose(&mut rand::thread_rng())
+                .ok_or_else(|| eyre!("No models to randomly pick."))
+                .cloned()
+        } else if model_or_provider == "!" {
+            // return the first model
+            self.models
+                .first()
+                .ok_or_else(|| eyre!("No models to choose first."))
+                .cloned()
+        } else if let Ok(provider) = ModelProvider::try_from(model_or_provider.clone()) {
             // this is a valid provider, return the first matching model in the config
             self.models
                 .iter()

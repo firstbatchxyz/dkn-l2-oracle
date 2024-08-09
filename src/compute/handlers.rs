@@ -1,4 +1,4 @@
-use super::WorkflowsExt;
+use super::{ModelConfig, WorkflowsExt};
 use crate::DriaOracle;
 use alloy::primitives::{Bytes, TxHash, U256};
 use eyre::{Context, Result};
@@ -8,18 +8,20 @@ use std::str::FromStr;
 use super::mine_nonce;
 
 /// Handles a generation request.
-pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHash> {
+pub async fn handle_generation(
+    node: &DriaOracle,
+    models: &ModelConfig,
+    task_id: U256,
+) -> Result<TxHash> {
     let request = node
         .get_task_request(task_id)
         .await
         .wrap_err("Could not get task")?;
 
-    // create executor
-    let executor = Executor::new(Model::GPT4oMini);
-
-    // parse input
-    // let input_str = bytes_to_string(&request.input).wrap_err("Could not read input")?;
-    let (output_str, metadata_str) = executor.generation(&request.input).await?;
+    // parse & execute input
+    let model = Model::GPT4oMini; // TODO: choose model
+    let executor = Executor::new(model);
+    let (output_str, metadata_str) = executor.execute_raw(&request.input).await?;
     let output = Bytes::from_str(&output_str)?;
     let metadata = Bytes::from_str(&metadata_str)?;
 
