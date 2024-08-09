@@ -3,7 +3,7 @@ use crate::{
     contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
-use alloy::primitives::{Bytes, U256};
+use alloy::primitives::U256;
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 
@@ -86,8 +86,7 @@ pub async fn run_oracle(node: &DriaOracle, kinds: Vec<OracleKind>) -> Result<()>
 }
 
 pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
-    log::info!("Displaying task {}.", task_id);
-
+    log::info!("Viewing task {}.", task_id);
     let (request, responses, validations) = node.get_task(task_id).await?;
 
     log::info!("Request Information:");

@@ -3,7 +3,7 @@ use alloy::primitives::U256;
 use clap::{Parser, Subcommand};
 use eyre::Result;
 
-/// Parses a str to `OracleKind`.
+/// `value_parser` to parse a `str` to `OracleKind`.
 fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
     OracleKind::try_from(value)
 }

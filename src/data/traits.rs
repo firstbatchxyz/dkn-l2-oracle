@@ -16,7 +16,7 @@ pub trait OracleExternalData {
     async fn put(&self, value: Self::Value) -> Self::Key;
 
     /// Checks if the key is valid.
-    fn is_key(&self, key: Self::Key) -> bool;
+    fn is_key(key: Self::Key) -> bool;
 
     /// Describes the implementation.
     fn describe() -> String;

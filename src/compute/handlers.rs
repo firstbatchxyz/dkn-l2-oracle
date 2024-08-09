@@ -1,5 +1,5 @@
 use super::WorkflowsExt;
-use crate::{contracts::bytes_to_string, DriaOracle};
+use crate::DriaOracle;
 use alloy::primitives::{Bytes, TxHash, U256};
 use eyre::{Context, Result};
 use ollama_workflows::{Executor, Model};
@@ -18,8 +18,8 @@ pub async fn handle_generation(node: &DriaOracle, task_id: U256) -> Result<TxHas
     let executor = Executor::new(Model::GPT4oMini);
 
     // parse input
-    let input_str = bytes_to_string(&request.input).wrap_err("Could not read input")?;
-    let (output_str, metadata_str) = executor.generation(input_str).await?;
+    // let input_str = bytes_to_string(&request.input).wrap_err("Could not read input")?;
+    let (output_str, metadata_str) = executor.generation(&request.input).await?;
     let output = Bytes::from_str(&output_str)?;
     let metadata = Bytes::from_str(&metadata_str)?;
 

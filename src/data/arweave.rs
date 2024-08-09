@@ -3,6 +3,8 @@ use async_trait::async_trait;
 use eyre::{eyre, Context, Result};
 use reqwest::{Client, Url};
 
+const DEFAULT_BASE_URL: &str = "https://gateway.irys.xyz";
+
 pub struct Arweave {
     // keypair_path: PathBuf,
     base_url: Url,
@@ -26,12 +28,17 @@ impl Arweave {
     }
 }
 
+impl Default for Arweave {
+    fn default() -> Self {
+        Self::new(DEFAULT_BASE_URL).expect("Default URL should be parsed")
+    }
+}
+
 #[async_trait]
 impl OracleExternalData for Arweave {
-    type Key = String; // TODO: bytes
+    type Key = String;
     type Value = bytes::Bytes;
 
-    /// Arweave returns
     async fn get(&self, key: Self::Key) -> Result<Self::Value> {
         let url = self.base_url.join(&key)?;
         let response = self
@@ -55,7 +62,7 @@ impl OracleExternalData for Arweave {
     }
 
     /// Check if key is 64-characters and hex.
-    fn is_key(&self, key: Self::Key) -> bool {
+    fn is_key(key: Self::Key) -> bool {
         key.len() == 64 && key.chars().all(|c| c.is_ascii_hexdigit())
     }
 
@@ -68,13 +75,11 @@ impl OracleExternalData for Arweave {
 mod tests {
     use super::*;
 
-    const BASE_URL: &str = "https://gateway.irys.xyz";
-
     #[tokio::test]
     async fn test_download_data() -> Result<()> {
         // https://gateway.irys.xyz/Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
         let key = "Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA";
-        let arweave = Arweave::new(BASE_URL)?;
+        let arweave = Arweave::default();
 
         let result = arweave.get(key.to_string()).await?;
         let val = serde_json::from_slice::<String>(&result)?;

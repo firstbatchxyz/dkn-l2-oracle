@@ -376,6 +376,14 @@ impl DriaOracle {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
+        // check if task id is valid
+        if task_id.is_zero() {
+            return Err(eyre!("Task ID must be non-zero."));
+        } else if task_id >= coordinator.nextTaskId().call().await?._0 {
+            return Err(eyre!("Task with id {} has not been created yet.", task_id));
+        }
+
+        // get task info
         let request = coordinator.requests(task_id).call().await?;
         let responses = coordinator.getResponses(task_id).call().await?;
         let validations = coordinator.getValidations(task_id).call().await?;
