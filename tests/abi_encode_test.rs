@@ -108,7 +108,6 @@ async fn test_encode() -> Result<()> {
         .call()
         .await?
         ._0;
-    println!(" {:?}", contract_bytes);
 
     // encode with alloy
     // let mut encoder = alloy::en ::Encoder::new();
@@ -119,7 +118,6 @@ async fn test_encode() -> Result<()> {
     local_bytes_vec.extend(some_bool.abi_encode());
     local_bytes_vec.extend(some_bytes.abi_encode());
     let local_bytes = Bytes::from(local_bytes_vec);
-    println!(" {:?}", local_bytes);
 
     assert_eq!(contract_bytes, local_bytes);
 

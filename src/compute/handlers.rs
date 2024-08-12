@@ -1,8 +1,8 @@
 use super::{ModelConfig, WorkflowsExt};
-use crate::DriaOracle;
+use crate::{contracts::bytes_to_string, DriaOracle};
 use alloy::primitives::{Bytes, TxHash, U256};
 use eyre::{Context, Result};
-use ollama_workflows::{Executor, Model};
+use ollama_workflows::Executor;
 use std::str::FromStr;
 
 use super::mine_nonce;
@@ -18,8 +18,11 @@ pub async fn handle_generation(
         .await
         .wrap_err("Could not get task")?;
 
-    // parse & execute input
-    let model = Model::GPT4oMini; // TODO: choose model
+    // choose model based on the request
+    let models_str = bytes_to_string(&request.models)?;
+    let (_, model) = models.get_any_matching_model_from_csv(models_str)?;
+
+    // execute task
     let executor = Executor::new(model);
     let (output_str, metadata_str) = executor.execute_raw(&request.input).await?;
     let output = Bytes::from_str(&output_str)?;
@@ -44,7 +47,11 @@ pub async fn handle_generation(
 }
 
 /// Handles a validation request.
-pub async fn handle_validation(node: &DriaOracle, task_id: U256) -> Result<TxHash> {
+pub async fn handle_validation(
+    node: &DriaOracle,
+    models: &ModelConfig,
+    task_id: U256,
+) -> Result<TxHash> {
     let request = node
         .get_task_request(task_id)
         .await

@@ -1,4 +1,3 @@
-use alloy::primitives::U256;
 use async_trait::async_trait;
 use bytes::Bytes;
 use eyre::{eyre, Result};

@@ -11,7 +11,7 @@ use super::ERC20::ERC20Errors;
 ///
 /// The given contract error is matched against known contract errors and a custom error message is returned
 pub fn contract_error_report(error: Error) -> ErrReport {
-    return match error {
+    match error {
         Error::UnknownFunction(function) => {
             eyre!("Unknown function: function {} does not exist", function)
         }
@@ -46,12 +46,12 @@ pub fn contract_error_report(error: Error) -> ErrReport {
                 eyre!("Unknown transport error: {:#?}", error)
             }
         }
-    };
+    }
 }
 
 impl From<ERC20Errors> for ErrReport {
     fn from(value: ERC20Errors) -> Self {
-        return match value {
+        match value {
             ERC20Errors::ERC20InsufficientAllowance(e) => eyre!(
                 "Insufficient allowance for {} (have {}, need {})",
                 e.spender,
@@ -72,13 +72,13 @@ impl From<ERC20Errors> for ErrReport {
             }
             ERC20Errors::ERC20InvalidSender(e) => eyre!("Invalid sender: {}", e.sender),
             ERC20Errors::ERC20InvalidSpender(e) => eyre!("Invalid spender: {}", e.spender),
-        };
+        }
     }
 }
 
 impl From<OracleRegistryErrors> for ErrReport {
     fn from(value: OracleRegistryErrors) -> Self {
-        return match value {
+        match value {
             OracleRegistryErrors::AlreadyRegistered(e) => {
                 eyre!("Already registered: {}", e._0)
             }
@@ -90,13 +90,13 @@ impl From<OracleRegistryErrors> for ErrReport {
             OracleRegistryErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
             }
-        };
+        }
     }
 }
 
 impl From<OracleCoordinatorErrors> for ErrReport {
     fn from(value: OracleCoordinatorErrors) -> Self {
-        return match value {
+        match value {
             OracleCoordinatorErrors::AlreadyResponded(e) => {
                 eyre!("Already responded to task {}", e.taskId)
             }
@@ -135,7 +135,7 @@ impl From<OracleCoordinatorErrors> for ErrReport {
             OracleCoordinatorErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
             }
-        };
+        }
     }
 }
 
@@ -146,9 +146,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_registry_error() -> eyre::Result<()> {
-        let config = DriaOracleConfig::new_from_env()?
-            .enable_logs()
-            .enable_color_eyre()?;
+        let config = DriaOracleConfig::new_from_env()?.enable_logs();
         let (node, _anvil) = DriaOracle::new_anvil(config).await?;
         assert!(node.provider.get_block_number().await? > 1);
 

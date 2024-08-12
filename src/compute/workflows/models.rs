@@ -1,17 +1,22 @@
-use super::split_comma_separated;
+#![allow(unused)]
+
+use super::{split_comma_separated, OllamaConfig, OpenAIConfig, ProvidersExt};
 use eyre::{eyre, Result};
 use ollama_workflows::{Model, ModelProvider};
 use rand::seq::IteratorRandom; // provides Vec<_>.choose
 
 #[derive(Debug, Clone)]
 pub struct ModelConfig {
-    pub(crate) models: Vec<(ModelProvider, Model)>,
+    pub(crate) models_providers: Vec<(ModelProvider, Model)>,
+    pub(crate) providers: Vec<ModelProvider>,
+    pub(crate) ollama_config: Option<OllamaConfig>,
+    pub(crate) openai_config: Option<OpenAIConfig>,
 }
 
 impl std::fmt::Display for ModelConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let models_str = self
-            .models
+            .models_providers
             .iter()
             .map(|(provider, model)| format!("{:?}:{}", provider, model))
             .collect::<Vec<_>>()
@@ -23,32 +28,72 @@ impl std::fmt::Display for ModelConfig {
 impl ModelConfig {
     /// Creates a new config with the given list of models.
     pub fn new(models: Vec<Model>) -> Self {
+        // map models to (provider, model) pairs
+        let models_providers = models
+            .into_iter()
+            .map(|m| (m.clone().into(), m))
+            .collect::<Vec<_>>();
+
+        let mut providers = Vec::new();
+
+        // get ollama models & config
+        let ollama_models = models_providers
+            .iter()
+            .filter_map(|(p, m)| {
+                if *p == ModelProvider::Ollama {
+                    Some(m.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let ollama_config = if !ollama_models.is_empty() {
+            providers.push(ModelProvider::Ollama);
+            Some(OllamaConfig::new(ollama_models))
+        } else {
+            None
+        };
+
+        // get openai models & config
+        let openai_models = models_providers
+            .iter()
+            .filter_map(|(p, m)| {
+                if *p == ModelProvider::OpenAI {
+                    Some(m.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let openai_config = if !openai_models.is_empty() {
+            providers.push(ModelProvider::OpenAI);
+            Some(OpenAIConfig::new(openai_models))
+        } else {
+            None
+        };
+
         Self {
-            models: models.into_iter().map(|m| (m.clone().into(), m)).collect(),
+            models_providers,
+            providers,
+            ollama_config,
+            openai_config,
         }
     }
 
     /// Parses Ollama-Workflows compatible models from a comma-separated values string.
     pub fn new_from_csv(input: Option<String>) -> Self {
         let models_str = split_comma_separated(input);
-
         let models = models_str
             .into_iter()
-            .filter_map(|s| match Model::try_from(s) {
-                Ok(model) => Some((model.clone().into(), model)),
-                Err(e) => {
-                    log::warn!("Error parsing model: {}", e);
-                    None
-                }
-            })
+            .filter_map(|s| Model::try_from(s).ok())
             .collect::<Vec<_>>();
 
-        Self { models }
+        Self::new(models)
     }
 
     /// Returns the list of models in the config that match the given provider.
     pub fn get_models_for_provider(&self, provider: ModelProvider) -> Vec<Model> {
-        self.models
+        self.models_providers
             .iter()
             .filter_map(|(p, m)| {
                 if *p == provider {
@@ -69,29 +114,29 @@ impl ModelConfig {
     ///
     /// If there are no matching models with this logic, an error is returned.
     pub fn get_matching_model(&self, model_or_provider: String) -> Result<(ModelProvider, Model)> {
-        if model_or_provider == "*" || model_or_provider == "all" {
+        if model_or_provider == "*" {
             // return a random model
-            self.models
+            self.models_providers
                 .iter()
                 .choose(&mut rand::thread_rng())
-                .ok_or_else(|| eyre!("No models to randomly pick."))
+                .ok_or_else(|| eyre!("No models to randomly pick for '*'."))
                 .cloned()
         } else if model_or_provider == "!" {
             // return the first model
-            self.models
+            self.models_providers
                 .first()
-                .ok_or_else(|| eyre!("No models to choose first."))
+                .ok_or_else(|| eyre!("No models to choose first for '!'."))
                 .cloned()
         } else if let Ok(provider) = ModelProvider::try_from(model_or_provider.clone()) {
             // this is a valid provider, return the first matching model in the config
-            self.models
+            self.models_providers
                 .iter()
                 .find(|(p, _)| *p == provider)
                 .ok_or_else(|| eyre!("Provider {} is not supported by this node.", provider))
                 .cloned()
         } else if let Ok(model) = Model::try_from(model_or_provider.clone()) {
             // this is a valid model, return it if it is supported by the node
-            self.models
+            self.models_providers
                 .iter()
                 .find(|(_, m)| *m == model)
                 .ok_or_else(|| eyre!("Model {} is not supported by this node.", model))
@@ -99,10 +144,18 @@ impl ModelConfig {
         } else {
             // this is neither a valid provider or model for this node
             Err(eyre!(
-                "Given string '{}' is neither a model nor provider.",
+                "Given string '{}' is not a valid model / provider identifier.",
                 model_or_provider
             ))
         }
+    }
+
+    /// From a comma-separated list of model or provider names, return a random matching model & provider.
+    pub fn get_any_matching_model_from_csv(
+        &self,
+        csv_model_or_provider: String,
+    ) -> Result<(ModelProvider, Model)> {
+        self.get_any_matching_model(split_comma_separated(Some(csv_model_or_provider)))
     }
 
     /// From a list of model or provider names, return a random matching model & provider.
@@ -132,16 +185,21 @@ impl ModelConfig {
             .ok_or_else(|| eyre!("No matching models found."))
     }
 
-    /// Returns the list of unique providers in the config.
-    pub fn get_providers(&self) -> Vec<ModelProvider> {
-        self.models
-            .iter()
-            .fold(Vec::new(), |mut unique, (provider, _)| {
-                if !unique.contains(provider) {
-                    unique.push(provider.clone());
-                }
-                unique
-            })
+    /// Check if the required compute services are running, e.g. if Ollama
+    /// is detected as a provider for the chosen models, it will check that
+    /// Ollama is running.
+    pub async fn check_providers(&self) -> Result<()> {
+        log::info!("Checking required providers.");
+
+        if let Some(provider) = &self.ollama_config {
+            provider.check_service().await?;
+        }
+
+        if let Some(provider) = &self.openai_config {
+            provider.check_service().await?;
+        }
+
+        Ok(())
     }
 }
 
@@ -153,12 +211,12 @@ mod tests {
     fn test_csv_parser() {
         let cfg =
             ModelConfig::new_from_csv(Some("idontexist,i dont either,i332287648762".to_string()));
-        assert_eq!(cfg.models.len(), 0);
+        assert_eq!(cfg.models_providers.len(), 0);
 
         let cfg = ModelConfig::new_from_csv(Some(
             "phi3:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl".to_string(),
         ));
-        assert_eq!(cfg.models.len(), 2);
+        assert_eq!(cfg.models_providers.len(), 2);
     }
 
     #[test]

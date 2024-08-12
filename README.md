@@ -4,14 +4,20 @@
 
 <p align="center">
   <h1 align="center">
-    Dria L2 Oracle
+    DKN L2 Oracle
   </h1>
   <p align="center">
-    <i>A Dria L2 oracle node to serve LLM requests from smart-contracts.</i>
+    <i>A DKN L2 oracle node to serve LLM requests from smart-contracts.</i>
   </p>
 </p>
 
-TODO:
+## Usage
+
+DKN L2 Oracle is a CLI tool.
+
+TODO: clone, install release, prepare env, run help
+
+### Models
 
 ## Testing
 

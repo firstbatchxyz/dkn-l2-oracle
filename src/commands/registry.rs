@@ -45,6 +45,7 @@ pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
         node.unregister(kind).await?;
 
         // transfer all allowance from registry back to oracle
+        log::info!("Transferring all allowance back from registry.");
         let allowance = node
             .allowance(node.contract_addresses.registry, node.address)
             .await?;

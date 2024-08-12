@@ -1,4 +1,4 @@
-use crate::{compute, contracts::*, DriaOracleConfig};
+use crate::{contracts::*, DriaOracleConfig};
 
 use alloy::contract::EventPoller;
 use alloy::primitives::Bytes;
@@ -13,7 +13,6 @@ use alloy::{
 };
 use alloy_chains::Chain;
 use eyre::{eyre, Context, Result};
-use futures_util::StreamExt;
 use std::env;
 use OracleCoordinator::{
     getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
@@ -74,7 +73,7 @@ impl DriaOracle {
         let contract_addresses = ADDRESSES[&chain].clone();
 
         let node = Self {
-            address: config.address.clone(),
+            address: config.address,
             config,
             contract_addresses,
             provider,

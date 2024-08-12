@@ -26,8 +26,12 @@ pub async fn run_oracle(
 
     // prepare model config
     let model_config = ModelConfig::new(models);
+    model_config.check_providers().await?;
 
-    let task_poller = node.subscribe_to_tasks().await?;
+    let task_poller = node
+        .subscribe_to_tasks()
+        .await
+        .wrap_err("Could not subscribe")?;
     log::info!(
         "Subscribed to LLMOracleCoordinator at {}",
         node.contract_addresses.coordinator
@@ -59,7 +63,7 @@ pub async fn run_oracle(
                         }
                         TaskStatus::PendingValidation => {
                             if is_validator {
-                                compute::handle_validation(node, event.taskId).await
+                                compute::handle_validation(node, &model_config, event.taskId).await
                             } else {
                                 return;
                             }
@@ -82,10 +86,10 @@ pub async fn run_oracle(
                                 tx_hash
                             )
                         }
-                        Err(e) => log::error!("Could not process task: {:?}", e),
+                        Err(e) => log::error!("Could not process task: {}", e),
                     }
                 }
-                Err(e) => log::error!("Could not handle event: {:?}", e),
+                Err(e) => log::error!("Could not handle event: {}", e),
             }
         })
         .await;

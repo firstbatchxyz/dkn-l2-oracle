@@ -34,7 +34,7 @@ pub fn mine_nonce(
             return (nonce, candidate, target);
         }
 
-        nonce += big_one.clone();
+        nonce += big_one;
     }
 }
 
