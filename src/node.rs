@@ -1,10 +1,12 @@
 use crate::{contracts::*, DriaOracleConfig};
 
 use alloy::contract::EventPoller;
+use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
+use alloy::rpc::types::Log;
 use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{Address, TxHash, U256},
@@ -307,11 +309,35 @@ impl DriaOracle {
     /// Subscribes to events & processes tasks.
     pub async fn subscribe_to_tasks(
         &self,
+        from_block: impl Into<BlockNumberOrTag>,
     ) -> Result<EventPoller<DriaOracleProviderTransport, StatusUpdate>> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
-        Ok(coordinator.StatusUpdate_filter().watch().await?)
+        Ok(coordinator
+            .StatusUpdate_filter()
+            .from_block(from_block)
+            .watch()
+            .await?)
+    }
+
+    /// Get previous tasks.
+    pub async fn get_tasks(
+        &self,
+        from_block: impl Into<BlockNumberOrTag>,
+        to_block: impl Into<BlockNumberOrTag>,
+    ) -> Result<Vec<(StatusUpdate, Log)>> {
+        let coordinator =
+            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+
+        let tasks = coordinator
+            .StatusUpdate_filter()
+            .from_block(from_block)
+            .to_block(to_block)
+            .query()
+            .await?;
+
+        Ok(tasks)
     }
 
     /// Checks contract sizes to ensure they are deployed.

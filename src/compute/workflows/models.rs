@@ -193,10 +193,12 @@ impl ModelConfig {
 
         if let Some(provider) = &self.ollama_config {
             provider.check_service().await?;
+            log::info!("{}", provider.describe());
         }
 
         if let Some(provider) = &self.openai_config {
             provider.check_service().await?;
+            log::info!("{}", provider.describe());
         }
 
         Ok(())
@@ -211,12 +213,12 @@ mod tests {
     fn test_csv_parser() {
         let cfg =
             ModelConfig::new_from_csv(Some("idontexist,i dont either,i332287648762".to_string()));
-        assert_eq!(cfg.models_providers.len(), 0);
+        assert_eq!(cfg.models_providers.len(), 0, "should have no models");
 
         let cfg = ModelConfig::new_from_csv(Some(
             "phi3:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl".to_string(),
         ));
-        assert_eq!(cfg.models_providers.len(), 2);
+        assert_eq!(cfg.models_providers.len(), 2, "should have some models");
     }
 
     #[test]
@@ -249,6 +251,7 @@ mod tests {
     #[test]
     fn test_get_any_matching_model() {
         let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b".to_string()));
+
         let result = cfg.get_any_matching_model(vec![
             "i-dont-exist".to_string(),
             "llama3.1:latest".to_string(),

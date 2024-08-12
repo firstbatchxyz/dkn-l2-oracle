@@ -11,4 +11,7 @@ pub use openai::OpenAIConfig;
 pub trait ProvidersExt {
     /// Ensures that the required provider is online & ready.
     async fn check_service(&self) -> Result<()>;
+
+    /// Describes the provider.
+    fn describe(&self) -> String;
 }

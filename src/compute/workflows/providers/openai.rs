@@ -28,4 +28,8 @@ impl ProvidersExt for OpenAIConfig {
 
         Ok(())
     }
+
+    fn describe(&self) -> String {
+        format!("OpenAI with models: {:?}", self.models)
+    }
 }

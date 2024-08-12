@@ -118,4 +118,8 @@ impl ProvidersExt for OllamaConfig {
 
         Ok(())
     }
+
+    fn describe(&self) -> String {
+        format!("Ollama with models: {:?}", self.models)
+    }
 }

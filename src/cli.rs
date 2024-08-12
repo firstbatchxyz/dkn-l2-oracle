@@ -1,5 +1,5 @@
 use crate::{commands, contracts::OracleKind, DriaOracle};
-use alloy::primitives::U256;
+use alloy::{eips::BlockNumberOrTag, primitives::U256};
 use clap::{Parser, Subcommand};
 use eyre::{eyre, Result};
 use ollama_workflows::Model;
@@ -35,15 +35,27 @@ enum Commands {
     Claim,
     /// See claimable rewards from the coordinator.
     Rewards,
-    /// Launch the oracle node.
-    Run {
+    /// Start the oracle node.
+    Start {
+        #[arg(
+            long,
+            help = "Starting block number to listen for, defaults to 'latest'."
+        )]
+        from: Option<BlockNumberOrTag>,
         #[arg(help = "The oracle kinds to handle tasks as.", required = true, value_parser=parse_oracle_kind)]
         kinds: Vec<OracleKind>,
-        #[arg(short, long, help = "The models to serve.", required = true, value_parser=parse_model)]
+        #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser=parse_model)]
         models: Vec<Model>,
     },
     /// View status of a given task.
     View { task_id: U256 },
+    /// View tasks between specific blocks.
+    Tasks {
+        #[arg(long, help = "Starting block number, defaults to 'earliest'.")]
+        from: Option<BlockNumberOrTag>,
+        #[arg(long, help = "Ending block number, defaults to 'latest'.")]
+        to: Option<BlockNumberOrTag>,
+    },
 }
 
 #[derive(Parser)]
@@ -77,9 +89,28 @@ pub async fn cli(node: DriaOracle) -> Result<()> {
         Commands::Registrations => commands::display_registrations(&node).await?,
         Commands::Claim => commands::claim_rewards(&node).await?,
         Commands::Rewards => commands::display_rewards(&node).await?,
-        Commands::Run { kinds, models } => commands::run_oracle(&node, kinds, models).await?,
+        Commands::Start {
+            kinds,
+            models,
+            from,
+        } => {
+            commands::run_oracle(
+                &node,
+                kinds,
+                models,
+                from.unwrap_or(BlockNumberOrTag::Latest),
+            )
+            .await?
+        }
         Commands::View { task_id } => commands::view_task(&node, task_id).await?,
-        // TODO: add "respond to latest available request" command
+        Commands::Tasks { from, to } => {
+            commands::view_task_events(
+                &node,
+                from.unwrap_or(BlockNumberOrTag::Earliest), // TODO: use coordinator block number as earliest
+                to.unwrap_or(BlockNumberOrTag::Latest),
+            )
+            .await?
+        }
     };
 
     Ok(())

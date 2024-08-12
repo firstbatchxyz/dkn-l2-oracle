@@ -40,9 +40,8 @@ pub fn mine_nonce(
 
 #[cfg(test)]
 mod tests {
-    use alloy::primitives::address;
-
     use super::*;
+    use alloy::primitives::address;
 
     #[test]
     fn test_nonce() {

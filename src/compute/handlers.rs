@@ -47,6 +47,7 @@ pub async fn handle_generation(
 }
 
 /// Handles a validation request.
+#[allow(unused)]
 pub async fn handle_validation(
     node: &DriaOracle,
     models: &ModelConfig,

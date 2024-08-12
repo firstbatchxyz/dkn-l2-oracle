@@ -3,7 +3,7 @@ use crate::{
     contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
-use alloy::primitives::U256;
+use alloy::{eips::BlockNumberOrTag, primitives::U256};
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 use ollama_workflows::Model;
@@ -14,6 +14,7 @@ pub async fn run_oracle(
     node: &DriaOracle,
     kinds: Vec<OracleKind>,
     models: Vec<Model>,
+    from_block: impl Into<BlockNumberOrTag>,
 ) -> Result<()> {
     // make sure we are registered to required kinds
     for kind in &kinds {
@@ -26,10 +27,13 @@ pub async fn run_oracle(
 
     // prepare model config
     let model_config = ModelConfig::new(models);
+    if model_config.models_providers.is_empty() {
+        return Err(eyre!("No models provided."))?;
+    }
     model_config.check_providers().await?;
 
     let task_poller = node
-        .subscribe_to_tasks()
+        .subscribe_to_tasks(from_block)
         .await
         .wrap_err("Could not subscribe")?;
     log::info!(
@@ -49,11 +53,19 @@ pub async fn run_oracle(
                     log::info!("Received event for task: {}", event.taskId);
 
                     // handle the event based on task status
-                    let response_tx_hash = match TaskStatus::try_from(event.statusAfter)
-                        .unwrap_or_else(|e| {
-                            log::error!("Could not parse task status: {}", e);
-                            TaskStatus::default()
-                        }) {
+                    let task_status = match TaskStatus::try_from(event.statusAfter) {
+                        Ok(status) => status,
+                        Err(e) => {
+                            log::error!(
+                                "Could not parse task status: {}, skipping task {}",
+                                e,
+                                event.taskId
+                            );
+                            return;
+                        }
+                    };
+
+                    let response_tx_hash = match task_status {
                         TaskStatus::PendingGeneration => {
                             if is_generator {
                                 compute::handle_generation(node, &model_config, event.taskId).await
@@ -93,6 +105,31 @@ pub async fn run_oracle(
             }
         })
         .await;
+
+    Ok(())
+}
+
+pub async fn view_task_events(
+    node: &DriaOracle,
+    from_block: impl Into<BlockNumberOrTag> + Clone,
+    to_block: impl Into<BlockNumberOrTag> + Clone,
+) -> Result<()> {
+    log::info!(
+        "Viewing task ids & statuses between blocks: {} - {}",
+        from_block.clone().into(),
+        to_block.clone().into()
+    );
+
+    let task_events = node.get_tasks(from_block, to_block).await?;
+
+    for (event, _) in task_events {
+        log::info!(
+            "Task: {} ({} -> {})",
+            event.taskId,
+            TaskStatus::try_from(event.statusBefore).unwrap_or_default(),
+            TaskStatus::try_from(event.statusAfter).unwrap_or_default()
+        );
+    }
 
     Ok(())
 }

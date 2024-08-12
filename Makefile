@@ -42,6 +42,10 @@ lint:
 format:
 		cargo fmt -v
 
+.PHONY: version #      | Print version
+version:
+	  @cargo pkgid | cut -d# -f2
+
 ###############################################################################
 # abi source can be given from outside, and defaults as shown here
 ABI_SRC_PATH?=../dria-contracts/artifacts
