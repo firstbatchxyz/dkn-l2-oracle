@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use eyre::{eyre, Result};
+use eyre::{Context, Result};
 use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 
 use crate::data::{arweave::Arweave, traits::OracleExternalData};
@@ -28,7 +28,10 @@ impl WorkflowsExt for Executor {
                 // if its a txid, we download the data and parse it again
                 // we dont expect to recurse here too much, because there would have to txid within txid
                 // but still it is possible
-                let input_bytes = Arweave::default().get(input_str).await?;
+                let input_bytes = Arweave::default()
+                    .get(input_str)
+                    .await
+                    .wrap_err("Could not download from Arweave")?;
                 self.prepare_input(&input_bytes).await
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
@@ -40,10 +43,11 @@ impl WorkflowsExt for Executor {
             // it is a workflow, so we can directly use it with no entry
             Ok((None, workflow))
         } else {
-            Err(eyre!(
-                "Could not parse input: {}",
-                String::from_utf8_lossy(input_bytes)
-            ))
+            // it is unparsable, return as lossy-converted string
+            let input_string = String::from_utf8_lossy(input_bytes);
+            let entry = Some(Entry::String(input_string.into()));
+            let workflow = get_generation_workflow()?;
+            Ok((entry, workflow))
         }
     }
 

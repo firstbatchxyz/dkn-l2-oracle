@@ -42,3 +42,7 @@ rand = "0.8.5"
 [[example]]
 name = "balance"
 path = 'example/balance.rs'
+
+[[example]]
+name = "block"
+path = 'example/block.rs'

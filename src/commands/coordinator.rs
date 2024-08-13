@@ -1,5 +1,5 @@
 use crate::{
-    compute::{self, ModelConfig},
+    compute::{handle_request, ModelConfig},
     contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
@@ -14,7 +14,7 @@ pub async fn run_oracle(
     node: &DriaOracle,
     kinds: Vec<OracleKind>,
     models: Vec<Model>,
-    from_block: impl Into<BlockNumberOrTag>,
+    from_block: impl Into<BlockNumberOrTag> + Clone,
 ) -> Result<()> {
     // make sure we are registered to required kinds
     for kind in &kinds {
@@ -22,8 +22,6 @@ pub async fn run_oracle(
             return Err(eyre!("You need to register as {} first.", kind))?;
         }
     }
-    let is_generator = kinds.contains(&OracleKind::Generator);
-    let is_validator = kinds.contains(&OracleKind::Validator);
 
     // prepare model config
     let model_config = ModelConfig::new(models);
@@ -32,73 +30,64 @@ pub async fn run_oracle(
     }
     model_config.check_providers().await?;
 
-    let task_poller = node
-        .subscribe_to_tasks(from_block)
+    // check previous tasks
+    if from_block.clone().into() != BlockNumberOrTag::Latest {
+        log::info!(
+            "Checking previous tasks from {} until now.",
+            from_block.clone().into()
+        );
+        let prev_tasks = node
+            .get_tasks(from_block.clone(), BlockNumberOrTag::Latest)
+            .await?;
+        for (event, log) in prev_tasks {
+            let task_id = event.taskId;
+            log::info!(
+                "Previous task: {} ({} -> {})",
+                task_id,
+                TaskStatus::try_from(event.statusBefore).unwrap_or_default(),
+                TaskStatus::try_from(event.statusAfter).unwrap_or_default()
+            );
+            match handle_request(node, &kinds, &model_config, event, log).await {
+                Ok(Some(tx_hash)) => {
+                    log::info!("Task {} processed successfully. (tx: {})", task_id, tx_hash)
+                }
+                Ok(None) => {
+                    log::info!("Task {} ignored.", task_id)
+                }
+                Err(e) => log::error!("Could not process task: {}", e),
+            }
+        }
+    }
+
+    // handle new tasks with subscription
+    let event_poller = node
+        .subscribe_to_tasks()
         .await
         .wrap_err("Could not subscribe")?;
     log::info!(
-        "Subscribed to LLMOracleCoordinator at {}",
-        node.contract_addresses.coordinator
+        "Subscribed to LLMOracleCoordinator ({}) as {}",
+        node.contract_addresses.coordinator,
+        kinds
+            .iter()
+            .map(|kind| kind.to_string())
+            .collect::<Vec<String>>()
+            .join(", ")
     );
 
-    task_poller
+    event_poller
         .into_stream()
         .for_each(|log| async {
             match log {
                 Ok((event, log)) => {
-                    log::debug!(
-                        "Received event for tx: {}",
-                        log.transaction_hash.unwrap_or_default()
-                    );
-                    log::info!("Received event for task: {}", event.taskId);
-
-                    // handle the event based on task status
-                    let task_status = match TaskStatus::try_from(event.statusAfter) {
-                        Ok(status) => status,
-                        Err(e) => {
-                            log::error!(
-                                "Could not parse task status: {}, skipping task {}",
-                                e,
-                                event.taskId
-                            );
-                            return;
+                    let task_id = event.taskId;
+                    match handle_request(node, &kinds, &model_config, event, log).await {
+                        Ok(Some(tx_hash)) => {
+                            log::info!("Task {} processed successfully. (tx: {})", task_id, tx_hash)
                         }
-                    };
-
-                    let response_tx_hash = match task_status {
-                        TaskStatus::PendingGeneration => {
-                            if is_generator {
-                                compute::handle_generation(node, &model_config, event.taskId).await
-                            } else {
-                                return;
-                            }
+                        Ok(None) => {
+                            log::info!("Task {} ignored.", task_id)
                         }
-                        TaskStatus::PendingValidation => {
-                            if is_validator {
-                                compute::handle_validation(node, &model_config, event.taskId).await
-                            } else {
-                                return;
-                            }
-                        }
-                        _ => {
-                            log::debug!(
-                                "Ignoring task {} with status: {}",
-                                event.taskId,
-                                event.statusAfter
-                            );
-                            return;
-                        }
-                    };
-
-                    match response_tx_hash {
-                        Ok(tx_hash) => {
-                            log::info!(
-                                "Task {} processed successfully. (tx: {})",
-                                event.taskId,
-                                tx_hash
-                            )
-                        }
-                        Err(e) => log::error!("Could not process task: {}", e),
+                        Err(e) => log::error!("Could not process task: {:#?}", e),
                     }
                 }
                 Err(e) => log::error!("Could not handle event: {}", e),

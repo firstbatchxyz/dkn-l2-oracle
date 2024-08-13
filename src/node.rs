@@ -273,11 +273,7 @@ impl DriaOracle {
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
         let req = coordinator.respond(task_id, nonce, response, metadata);
-        let tx = req
-            .send()
-            .await
-            .map_err(contract_error_report)
-            .wrap_err("Could not respond to generation.")?;
+        let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
         let awaited_tx_hash = tx.watch().await?;
@@ -309,16 +305,11 @@ impl DriaOracle {
     /// Subscribes to events & processes tasks.
     pub async fn subscribe_to_tasks(
         &self,
-        from_block: impl Into<BlockNumberOrTag>,
     ) -> Result<EventPoller<DriaOracleProviderTransport, StatusUpdate>> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
-        Ok(coordinator
-            .StatusUpdate_filter()
-            .from_block(from_block)
-            .watch()
-            .await?)
+        Ok(coordinator.StatusUpdate_filter().watch().await?)
     }
 
     /// Get previous tasks.
@@ -347,22 +338,25 @@ impl DriaOracle {
         let coordinator_size = self
             .provider
             .get_code_at(self.contract_addresses.coordinator)
-            .await?;
-        if coordinator_size.is_empty() {
+            .await
+            .and_then(|s| Ok(s.len()))?;
+        if coordinator_size == 0 {
             return Err(eyre!("Coordinator contract not deployed."));
         }
         let registry_size = self
             .provider
             .get_code_at(self.contract_addresses.registry)
-            .await?;
-        if registry_size.is_empty() {
+            .await
+            .and_then(|s| Ok(s.len()))?;
+        if registry_size == 0 {
             return Err(eyre!("Registry contract not deployed."));
         }
         let token_size = self
             .provider
             .get_code_at(self.contract_addresses.token)
-            .await?;
-        if token_size.is_empty() {
+            .await
+            .and_then(|s| Ok(s.len()))?;
+        if token_size == 0 {
             return Err(eyre!("Token contract not deployed."));
         }
 

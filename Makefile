@@ -7,24 +7,25 @@ endif
 ###############################################################################
 .PHONY: launch #       | Run with INFO logging & release mode
 launch:
-		RUST_LOG=info cargo run --release
+		RUST_LOG=info cargo run start --release
 		
 .PHONY: run #          | Run with INFO logging
 run:
-		RUST_LOG=none,dkn_oracle=info cargo run
+		RUST_LOG=none,dkn_oracle=info cargo run start
 
 .PHONY: debug #        | Run with crate-level DEBUG logging & info-level workflows
 debug:
-		RUST_LOG=none,dkn_oracle=debug,ollama_workflows=info cargo run
+		RUST_LOG=none,dkn_oracle=debug,ollama_workflows=info cargo run start
 
 .PHONY: trace #        | Run with crate-level TRACE logging
 trace:
-		RUST_LOG=none,dkn_oracle=trace cargo run
+		RUST_LOG=none,dkn_oracle=trace cargo run start
 
 ###############################################################################
 .PHONY: example-bal #  | Run balance example
 example-bal:
 		RUST_LOG=none,dkn_oracle=info cargo run --example balance
+
 ###############################################################################
 .PHONY: build #        | Build
 build:
