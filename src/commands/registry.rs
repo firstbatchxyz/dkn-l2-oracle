@@ -19,8 +19,8 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
             let difference = stake.amount - allowance.amount;
             log::info!(
                 "Approving {} tokens for {} registration.",
-                kind,
-                format_ether(difference)
+                format_ether(difference),
+                kind
             );
             node.approve(node.contract_addresses.registry, difference)
                 .await?;
@@ -45,10 +45,13 @@ pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
         node.unregister(kind).await?;
 
         // transfer all allowance from registry back to oracle
-        log::info!("Transferring all allowance back from registry.");
         let allowance = node
             .allowance(node.contract_addresses.registry, node.address)
             .await?;
+        log::info!(
+            "Transferring all allowance ({}) back from registry.",
+            allowance
+        );
         node.transfer_from(
             node.contract_addresses.registry,
             node.address,

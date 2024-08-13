@@ -18,6 +18,7 @@ use eyre::{eyre, Context, Result};
 use std::env;
 use OracleCoordinator::{
     getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
+    TaskValidation,
 };
 
 #[cfg(test)]
@@ -185,11 +186,7 @@ impl DriaOracle {
         let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
 
         let req = token.transferFrom(from, to, amount);
-        let tx = req
-            .send()
-            .await
-            .map_err(contract_error_report)
-            .wrap_err("Could not transfer tokens.")?;
+        let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
         let awaited_tx_hash = tx.watch().await?;
@@ -262,6 +259,15 @@ impl DriaOracle {
         Ok(responses._0)
     }
 
+    /// Returns the validation responses to a given task request.
+    pub async fn get_task_validations(&self, task_id: U256) -> Result<Vec<TaskValidation>> {
+        let coordinator =
+            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+
+        let responses = coordinator.getValidations(task_id).call().await?;
+        Ok(responses._0)
+    }
+
     pub async fn respond_generation(
         &self,
         task_id: U256,
@@ -291,11 +297,7 @@ impl DriaOracle {
             OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
 
         let req = coordinator.validate(task_id, nonce, scores, metadata);
-        let tx = req
-            .send()
-            .await
-            .map_err(contract_error_report)
-            .wrap_err("Could not respond to validation.")?;
+        let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
         let awaited_tx_hash = tx.watch().await?;

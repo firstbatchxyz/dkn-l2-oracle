@@ -7,9 +7,8 @@ use alloy::{
     primitives::{utils::parse_ether, Bytes, TxHash, U256},
     rpc::types::Log,
 };
-use eyre::{Context, Result};
+use eyre::{eyre, Context, Result};
 use ollama_workflows::Executor;
-use std::str::FromStr;
 
 use super::mine_nonce;
 
@@ -35,6 +34,10 @@ pub async fn handle_request(
             if kinds.contains(&OracleKind::Generator) {
                 handle_generation(node, &model_config, event.taskId).await?
             } else {
+                log::debug!(
+                    "Ignoring generation task {} as you are not generator.",
+                    event.taskId
+                );
                 return Ok(None);
             }
         }
@@ -74,6 +77,11 @@ async fn handle_generation(
     models: &ModelConfig,
     task_id: U256,
 ) -> Result<TxHash> {
+    let responses = node.get_task_responses(task_id).await?;
+    if responses.iter().any(|r| r.responder == node.address) {
+        return Err(eyre!("Already responded to {} with generation", task_id));
+    }
+
     let request = node
         .get_task_request(task_id)
         .await
@@ -114,6 +122,21 @@ async fn handle_validation(
     models: &ModelConfig,
     task_id: U256,
 ) -> Result<TxHash> {
+    // check if already responded as generator, because we cant validate our own answer
+    let responses = node.get_task_responses(task_id).await?;
+    if responses.iter().any(|r| r.responder == node.address) {
+        return Err(eyre!(
+            "Cant validate {} with your own generation response",
+            task_id
+        ));
+    }
+
+    // check if we have validated anyways
+    let validations = node.get_task_validations(task_id).await?;
+    if validations.iter().any(|v| v.validator == node.address) {
+        return Err(eyre!("Already validated {}", task_id));
+    }
+
     let request = node
         .get_task_request(task_id)
         .await
@@ -138,7 +161,6 @@ async fn handle_validation(
 
     let tx_hash = node
         .respond_validation(task_id, scores, metadata, nonce)
-        .await
-        .wrap_err("Could not respond to generation")?;
+        .await?;
     Ok(tx_hash)
 }
