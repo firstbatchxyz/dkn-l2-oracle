@@ -5,6 +5,8 @@ mod node;
 pub use node::DriaOracle;
 
 mod compute;
+pub use compute::mine_nonce;
+
 mod contracts;
 
 // commands are exported for integration tests

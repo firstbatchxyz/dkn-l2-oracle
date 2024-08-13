@@ -39,7 +39,6 @@ async fn test_encode_packed() -> Result<()> {
         .with_recommended_fillers()
         .wallet(wallet)
         .on_http(rpc_url);
-    // let provider = setup_anvil().await?;
     let contract = TestSolidityPacked::deploy(&provider).await?;
 
     // prepare parameters
@@ -105,6 +104,7 @@ async fn test_encode() -> Result<()> {
             some_bool,
             some_bytes.clone(),
         )
+        .with_cloned_provider()
         .call()
         .await?
         ._0;

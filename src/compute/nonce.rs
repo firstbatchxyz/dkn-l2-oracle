@@ -28,8 +28,8 @@ pub fn mine_nonce(
         nonce.abi_encode_packed_to(&mut message);
 
         // check hash
-        let digest = keccak256(message);
-        let candidate = U256::from_le_bytes(*digest);
+        let digest = keccak256(message.clone());
+        let candidate = U256::from_be_bytes(*digest); // big-endian!
         if candidate < target {
             return (nonce, candidate, target);
         }
@@ -51,11 +51,12 @@ mod tests {
         let task_id = U256::from(0x1234);
         let difficulty = 2;
 
-        let (nonce, _, _) = mine_nonce(difficulty, &requester, &responder, &input, &task_id);
+        let (nonce, _candidate, _target) =
+            mine_nonce(difficulty, &requester, &responder, &input, &task_id);
         assert!(!nonce.is_zero());
 
-        // println!("Nonce: {}", nonce);
-        // println!("Target: {:x}", target);
-        // println!("Candidate: {:x}", candidate);
+        println!("Nonce: {}", nonce);
+        println!("Target: {:x}", _target);
+        println!("Candidate: {:x}", _candidate);
     }
 }
