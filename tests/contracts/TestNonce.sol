@@ -6,7 +6,7 @@ pragma solidity 0.8.26;
 contract TestNonce {
     function assertValidNonce(uint256 taskId, bytes calldata input, address requester, address responder, uint256 nonce, uint8 difficulty)
         external
-        view
+        pure
         returns (bytes memory message, bool result, bytes32 candidate, uint256 target)
     {
         message = abi.encodePacked(taskId, input, requester, responder, nonce);

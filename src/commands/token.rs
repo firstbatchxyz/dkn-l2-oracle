@@ -3,10 +3,11 @@ use eyre::Result;
 
 /// Display token balances
 pub async fn display_balance(node: &DriaOracle) -> Result<()> {
-    let balances = node.balances().await?;
+    let eth_balance = node.get_native_balance(node.address).await?;
+    let token_balance = node.get_token_balance(node.address).await?;
 
     log::info!("Your balances:");
-    for balance in balances {
+    for balance in [eth_balance, token_balance].iter() {
         log::info!("{}", balance);
     }
 

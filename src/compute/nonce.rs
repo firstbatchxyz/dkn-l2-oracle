@@ -37,26 +37,3 @@ pub fn mine_nonce(
         nonce += big_one;
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloy::primitives::address;
-
-    #[test]
-    fn test_nonce() {
-        let requester = address!("0877022A137b8E8CE1C3020B9f047651dD02E37B");
-        let responder = address!("0877022A137b8E8CE1C3020B9f047651dD02E37B");
-        let input = vec![0x01, 0x02, 0x03].into();
-        let task_id = U256::from(0x1234);
-        let difficulty = 2;
-
-        let (nonce, _candidate, _target) =
-            mine_nonce(difficulty, &requester, &responder, &input, &task_id);
-        assert!(!nonce.is_zero());
-
-        println!("Nonce: {}", nonce);
-        println!("Target: {:x}", _target);
-        println!("Candidate: {:x}", _candidate);
-    }
-}

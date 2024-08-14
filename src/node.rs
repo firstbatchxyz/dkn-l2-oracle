@@ -95,22 +95,24 @@ impl DriaOracle {
 
         Ok(Chain::from_id(chain_id_u64))
     }
-    /// Returns ETH balance and configured token balance.
-    pub async fn balances(&self) -> Result<[TokenBalance; 2]> {
-        let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
-        let token_balance = token.balanceOf(self.address).call().await?._0;
+
+    /// Returns the native token balance of a given address.
+    pub async fn get_native_balance(&self, address: Address) -> Result<TokenBalance> {
+        let balance = self.provider.get_balance(address).await?;
+        Ok(TokenBalance::new(balance, "ETH".to_string(), None))
+    }
+
+    /// Returns the token balance of a given address.
+    pub async fn get_token_balance(&self, address: Address) -> Result<TokenBalance> {
+        let token = ERC20::new(self.contract_addresses.token, &self.provider);
+        let token_balance = token.balanceOf(address).call().await?._0;
         let token_symbol = token.symbol().call().await?._0;
 
-        let eth_balance = self.provider.get_balance(self.address).await?;
-
-        Ok([
-            TokenBalance::new(eth_balance, "ETH".to_string(), None),
-            TokenBalance::new(
-                token_balance,
-                token_symbol,
-                Some(self.contract_addresses.token),
-            ),
-        ])
+        Ok(TokenBalance::new(
+            token_balance,
+            token_symbol,
+            Some(self.contract_addresses.token),
+        ))
     }
 
     /// Request an oracle task. This is not done by the oracle normally, but we have it added for testing purposes.
@@ -123,7 +125,7 @@ impl DriaOracle {
         num_vals: u64,
     ) -> Result<TxHash> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let req = coordinator.request(input, models, difficulty, num_gens, num_vals);
         let tx = req
@@ -139,7 +141,7 @@ impl DriaOracle {
 
     /// Register the oracle with the registry.
     pub async fn register(&self, kind: OracleKind) -> Result<TxHash> {
-        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+        let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let req = registry.register(kind.into());
         let tx = req
@@ -155,7 +157,7 @@ impl DriaOracle {
 
     /// Unregister from the oracle registry.
     pub async fn unregister(&self, kind: OracleKind) -> Result<TxHash> {
-        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+        let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let req = registry.unregister(kind.into());
         let tx = req
@@ -170,7 +172,7 @@ impl DriaOracle {
     }
 
     pub async fn is_registered(&self, kind: OracleKind) -> Result<bool> {
-        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+        let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let is_registered = registry
             .isRegistered(self.address, kind.into())
@@ -180,7 +182,7 @@ impl DriaOracle {
     }
 
     pub async fn transfer_from(&self, from: Address, to: Address, amount: U256) -> Result<TxHash> {
-        let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
+        let token = ERC20::new(self.contract_addresses.token, &self.provider);
 
         let req = token.transferFrom(from, to, amount);
         let tx = req.send().await.map_err(contract_error_report)?;
@@ -191,7 +193,7 @@ impl DriaOracle {
     }
 
     pub async fn approve(&self, spender: Address, amount: U256) -> Result<TxHash> {
-        let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
+        let token = ERC20::new(self.contract_addresses.token, &self.provider);
 
         let req = token.approve(spender, amount);
         let tx = req
@@ -206,7 +208,7 @@ impl DriaOracle {
     }
 
     pub async fn allowance(&self, owner: Address, spender: Address) -> Result<TokenBalance> {
-        let token = ERC20::new(self.contract_addresses.token, self.provider.clone());
+        let token = ERC20::new(self.contract_addresses.token, &self.provider);
         let token_symbol = token.symbol().call().await?._0;
 
         let allowance = token.allowance(owner, spender).call().await?._0;
@@ -219,13 +221,13 @@ impl DriaOracle {
 
     /// Returns the amount of tokens to be staked to registry.
     pub async fn registry_stake_amount(&self, kind: OracleKind) -> Result<TokenBalance> {
-        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+        let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let stake_amount = registry.getStakeAmount(kind.into()).call().await?._0;
 
         // return the symbol as well
         let token_address = registry.token().call().await?._0;
-        let token = ERC20::new(token_address, self.provider.clone());
+        let token = ERC20::new(token_address, &self.provider);
         let token_symbol = token.symbol().call().await?._0;
 
         Ok(TokenBalance::new(
@@ -241,7 +243,7 @@ impl DriaOracle {
         task_id: U256,
     ) -> Result<OracleCoordinator::requestsReturn> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let request = coordinator.requests(task_id).call().await?;
         Ok(request)
@@ -250,7 +252,7 @@ impl DriaOracle {
     /// Returns the generation responses to a given task request.
     pub async fn get_task_responses(&self, task_id: U256) -> Result<Vec<TaskResponse>> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let responses = coordinator.getResponses(task_id).call().await?;
         Ok(responses._0)
@@ -259,7 +261,7 @@ impl DriaOracle {
     /// Returns the validation responses to a given task request.
     pub async fn get_task_validations(&self, task_id: U256) -> Result<Vec<TaskValidation>> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let responses = coordinator.getValidations(task_id).call().await?;
         Ok(responses._0)
@@ -273,7 +275,7 @@ impl DriaOracle {
         nonce: U256,
     ) -> Result<TxHash> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let req = coordinator.respond(task_id, nonce, response, metadata);
         let tx = req.send().await.map_err(contract_error_report)?;
@@ -291,7 +293,7 @@ impl DriaOracle {
         nonce: U256,
     ) -> Result<TxHash> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let req = coordinator.validate(task_id, nonce, scores, metadata);
         let tx = req.send().await.map_err(contract_error_report)?;
@@ -306,7 +308,7 @@ impl DriaOracle {
         &self,
     ) -> Result<EventPoller<DriaOracleProviderTransport, StatusUpdate>> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         Ok(coordinator.StatusUpdate_filter().watch().await?)
     }
@@ -318,7 +320,7 @@ impl DriaOracle {
         to_block: impl Into<BlockNumberOrTag>,
     ) -> Result<Vec<(StatusUpdate, Log)>> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         let tasks = coordinator
             .StatusUpdate_filter()
@@ -369,8 +371,8 @@ impl DriaOracle {
     /// Ensures that the registry & coordinator tokens match the expected token.
     pub async fn check_contract_tokens(&self) -> Result<()> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
-        let registry = OracleRegistry::new(self.contract_addresses.registry, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
+        let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         // check registry
         let registry_token = registry.token().call().await?._0;
@@ -392,7 +394,7 @@ impl DriaOracle {
         task_id: U256,
     ) -> Result<(requestsReturn, getResponsesReturn, getValidationsReturn)> {
         let coordinator =
-            OracleCoordinator::new(self.contract_addresses.coordinator, self.provider.clone());
+            OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
         // check if task id is valid
         if task_id.is_zero() {

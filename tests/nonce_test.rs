@@ -1,11 +1,5 @@
-#![cfg(test)]
-
 use alloy::{
-    network::EthereumWallet,
-    node_bindings::{anvil, Anvil},
-    primitives::{address, Address, Bytes, U256},
-    providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
+    primitives::{address, Bytes, U256},
     sol,
 };
 use dkn_oracle::{mine_nonce, DriaOracle, DriaOracleConfig};
@@ -30,7 +24,7 @@ sol! {
 }
 
 #[tokio::test]
-async fn test_nonce() -> Result<()> {
+async fn test_nonce_contract() -> Result<()> {
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::new_anvil(config).await?;
     let contract = TestNonce::deploy(&node.provider).await?;
@@ -62,4 +56,21 @@ async fn test_nonce() -> Result<()> {
     assert_eq!(U256::from_be_bytes(contract_bytes.candidate.0), candidate);
     assert_eq!(contract_bytes.result, true);
     Ok(())
+}
+
+#[test]
+fn test_nonce_local() {
+    let requester = address!("0877022A137b8E8CE1C3020B9f047651dD02E37B");
+    let responder = address!("0877022A137b8E8CE1C3020B9f047651dD02E37B");
+    let input = vec![0x01, 0x02, 0x03].into();
+    let task_id = U256::from(0x1234);
+    let difficulty = 2;
+
+    let (nonce, _candidate, _target) =
+        mine_nonce(difficulty, &requester, &responder, &input, &task_id);
+    assert!(!nonce.is_zero());
+
+    println!("Nonce: {}", nonce);
+    println!("Target: {:x}", _target);
+    println!("Candidate: {:x}", _candidate);
 }
