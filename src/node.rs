@@ -2,6 +2,7 @@ use crate::{contracts::*, DriaOracleConfig};
 
 use alloy::contract::EventPoller;
 use alloy::eips::BlockNumberOrTag;
+use alloy::node_bindings::{Anvil, AnvilInstance};
 use alloy::primitives::Bytes;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
@@ -20,9 +21,6 @@ use OracleCoordinator::{
     getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
     TaskValidation,
 };
-
-#[cfg(test)]
-use alloy::node_bindings::{Anvil, AnvilInstance};
 
 // TODO: use a better type for these
 type DriaOracleProviderTransport = Http<Client>;
@@ -48,9 +46,8 @@ impl DriaOracle {
     ///
     /// Return the node instance and the Anvil instance.
     /// Note that when Anvil instance is dropped, you will lose the forked chain.
-    #[cfg(test)]
     pub async fn new_anvil(mut config: DriaOracleConfig) -> Result<(Self, AnvilInstance)> {
-        let anvil = Anvil::new().fork(config.rpc_url.clone()).try_spawn()?;
+        let anvil = Anvil::new().fork(config.rpc_url.to_string()).try_spawn()?;
         let anvil_rpc_url = anvil.endpoint_url();
 
         let config = config.with_rpc_url(anvil_rpc_url);

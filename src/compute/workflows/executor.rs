@@ -5,12 +5,16 @@ use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 
 use crate::data::{arweave::Arweave, traits::OracleExternalData};
 
-use super::preset::get_generation_workflow;
-
 #[async_trait]
 pub trait WorkflowsExt {
     async fn prepare_input(&self, input_bytes: &Bytes) -> Result<(Option<Entry>, Workflow)>;
     async fn execute_raw(&self, input_bytes: &Bytes) -> Result<(String, String)>;
+
+    /// Returns a generation workflow for the executor.
+    #[inline]
+    fn get_generation_workflow(&self) -> Result<Workflow> {
+        Ok(serde_json::from_str(include_str!("generation.json"))?)
+    }
 }
 
 #[async_trait]
@@ -36,7 +40,7 @@ impl WorkflowsExt for Executor {
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
                 let entry = Some(Entry::String(input_str));
-                let workflow = get_generation_workflow()?;
+                let workflow = self.get_generation_workflow()?;
                 Ok((entry, workflow))
             }
         } else if let Ok(workflow) = serde_json::from_slice::<Workflow>(input_bytes) {
@@ -46,7 +50,7 @@ impl WorkflowsExt for Executor {
             // it is unparsable, return as lossy-converted string
             let input_string = String::from_utf8_lossy(input_bytes);
             let entry = Some(Entry::String(input_string.into()));
-            let workflow = get_generation_workflow()?;
+            let workflow = self.get_generation_workflow()?;
             Ok((entry, workflow))
         }
     }
@@ -59,29 +63,8 @@ impl WorkflowsExt for Executor {
         let (entry, workflow) = self.prepare_input(input_bytes).await?;
         let mut memory = ProgramMemory::new();
         let output = self.execute(entry.as_ref(), workflow, &mut memory).await;
+
+        // TODO: metadata shall be returned instead of string default
         Ok((output, String::default()))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use ollama_workflows::Model;
-    use serde_json::json;
-
-    use super::*;
-
-    #[tokio::test]
-    #[ignore = "run this manually"]
-    async fn test_ollama_generation() {
-        let executor = Executor::new(Model::Phi3Mini);
-        let (output, _) = executor
-            .execute_raw(&Bytes::from(
-                json!("What is the result of 2 + 2?").to_string(),
-            ))
-            .await
-            .unwrap();
-
-        // funny test but it should pass
-        assert!(output.contains('4'));
     }
 }

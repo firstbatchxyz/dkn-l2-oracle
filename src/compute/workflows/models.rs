@@ -81,7 +81,7 @@ impl ModelConfig {
     }
 
     /// Parses Ollama-Workflows compatible models from a comma-separated values string.
-    pub fn new_from_csv(input: Option<String>) -> Self {
+    pub fn new_from_csv(input: Option<&str>) -> Self {
         let models_str = split_comma_separated(input);
         let models = models_str
             .into_iter()
@@ -153,9 +153,9 @@ impl ModelConfig {
     /// From a comma-separated list of model or provider names, return a random matching model & provider.
     pub fn get_any_matching_model_from_csv(
         &self,
-        csv_model_or_provider: String,
+        csv_model_or_provider: &str,
     ) -> Result<(ModelProvider, Model)> {
-        self.get_any_matching_model(split_comma_separated(Some(csv_model_or_provider)))
+        self.get_any_matching_model(split_comma_separated(Some(&csv_model_or_provider)))
     }
 
     /// From a list of model or provider names, return a random matching model & provider.
@@ -211,19 +211,18 @@ mod tests {
 
     #[test]
     fn test_csv_parser() {
-        let cfg =
-            ModelConfig::new_from_csv(Some("idontexist,i dont either,i332287648762".to_string()));
+        let cfg = ModelConfig::new_from_csv(Some("idontexist,i dont either,i332287648762"));
         assert_eq!(cfg.models_providers.len(), 0, "should have no models");
 
         let cfg = ModelConfig::new_from_csv(Some(
-            "phi3:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl".to_string(),
+            "phi3:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl",
         ));
         assert_eq!(cfg.models_providers.len(), 2, "should have some models");
     }
 
     #[test]
     fn test_model_matching() {
-        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b".to_string()));
+        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b"));
         assert_eq!(
             cfg.get_matching_model("openai".to_string()).unwrap().1,
             Model::GPT3_5Turbo,
@@ -250,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_get_any_matching_model() {
-        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b".to_string()));
+        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b"));
 
         let result = cfg.get_any_matching_model(vec![
             "i-dont-exist".to_string(),

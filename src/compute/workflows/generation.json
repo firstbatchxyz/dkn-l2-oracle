@@ -1,0 +1,61 @@
+{
+  "name": "LLM generation",
+  "description": "Directly generate text with input",
+  "config": {
+    "max_steps": 1,
+    "max_time": 50,
+    "tools": [""]
+  },
+  "external_memory": {
+    "context": [""],
+    "question": [""],
+    "answer": [""]
+  },
+  "tasks": [
+    {
+      "id": "A",
+      "name": "Generate",
+      "description": "",
+      "prompt": "{text}",
+      "inputs": [
+        {
+          "name": "text",
+          "value": {
+            "type": "input",
+            "key": ""
+          },
+          "required": true
+        }
+      ],
+      "operator": "generation",
+      "outputs": [
+        {
+          "type": "write",
+          "key": "result",
+          "value": "__result"
+        }
+      ]
+    },
+    {
+      "id": "__end",
+      "name": "end",
+      "description": "End of the task",
+      "prompt": "End of the task",
+      "inputs": [],
+      "operator": "end",
+      "outputs": []
+    }
+  ],
+  "steps": [
+    {
+      "source": "A",
+      "target": "__end"
+    }
+  ],
+  "return_value": {
+    "input": {
+      "type": "read",
+      "key": "result"
+    }
+  }
+}

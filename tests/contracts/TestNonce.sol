@@ -3,13 +3,13 @@ pragma solidity 0.8.26;
 
 /// @dev solc v0.8.26; solc tests/contracts/TestNonce.sol --via-ir --optimize --bin
 /// @dev you may have to do: `solc-select install 0.8.26`
-/// @dev 6080806040523460155761018d908161001a8239f35b5f80fdfe6080600436101561000e575f80fd5b5f3560e01c63f8c4172414610021575f80fd5b346101535760a03660031901126101535760243567ffffffffffffffff811161015357366023820112156101535780600401359067ffffffffffffffff8211610153573660248383010111610153576044356001600160a01b0381168103610153576084359260ff84168094036101535760409181869260246020850196600435885201858501378201906bffffffffffffffffffffffff199060601b16838201523360601b6054820152606435606882015203016028810184526067601f1991011683019280841067ffffffffffffffff85111761013f5783604052519020905f19901c1061010d57005b62461bcd60e51b815260206004820152600d60248201526c494e56414c4944204e4f4e434560981b6044820152606490fd5b634e487b7160e01b5f52604160045260245ffd5b5f80fdfea2646970667358221220a45b0a1657f9ec65af92371dd8eed0de52689a10ab694093648585a30c31a8fe64736f6c634300081a0033
 contract TestNonce {
-    function assertValidNonce(uint256 taskId, bytes calldata input, address requester, uint256 nonce, uint8 difficulty) external
+    function assertValidNonce(uint256 taskId, bytes calldata input, address requester, address responder, uint256 nonce, uint8 difficulty)
+        external
         view
-        returns (bytes memory message, bool result, bytes32 candidate, uint256 target) 
+        returns (bytes memory message, bool result, bytes32 candidate, uint256 target)
     {
-        message = abi.encodePacked(taskId, input, requester, msg.sender, nonce);
+        message = abi.encodePacked(taskId, input, requester, responder, nonce);
         target = type(uint256).max >> uint256(difficulty);
         candidate = keccak256(message);
         result = uint256(candidate) <= target;

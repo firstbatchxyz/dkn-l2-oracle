@@ -142,7 +142,10 @@ impl From<OracleCoordinatorErrors> for ErrReport {
 #[cfg(test)]
 mod tests {
     use crate::{contracts::OracleKind, DriaOracle, DriaOracleConfig};
-    use alloy::providers::Provider;
+    use alloy::{
+        primitives::{utils::parse_ether, Address},
+        providers::Provider,
+    };
 
     #[tokio::test]
     async fn test_registry_error() -> eyre::Result<()> {

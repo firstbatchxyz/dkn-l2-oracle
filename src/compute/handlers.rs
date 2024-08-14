@@ -20,16 +20,12 @@ pub async fn handle_request(
     log: Log,
 ) -> Result<Option<TxHash>> {
     log::debug!(
-        "Received event for tx: {}",
+        "Received event for task {} (tx: {})",
+        event.taskId,
         log.transaction_hash.unwrap_or_default()
     );
-    log::info!("Received event for task: {}", event.taskId);
 
-    // check task status
-    let task_status = TaskStatus::try_from(event.statusAfter)?;
-
-    // respond to task
-    let response_tx_hash = match task_status {
+    let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
             if kinds.contains(&OracleKind::Generator) {
                 handle_generation(node, &model_config, event.taskId).await?
@@ -45,6 +41,10 @@ pub async fn handle_request(
             if kinds.contains(&OracleKind::Validator) {
                 handle_validation(node, &model_config, event.taskId).await?
             } else {
+                log::debug!(
+                    "Ignoring generation task {} as you are not validator.",
+                    event.taskId
+                );
                 return Ok(None);
             }
         }
@@ -57,18 +57,7 @@ pub async fn handle_request(
         }
     };
 
-    Ok(Some(response_tx_hash))
-    // print tx hash of response
-    // match response_tx_hash {
-    //     Ok(tx_hash) => {
-    //         log::info!(
-    //             "Task {} processed successfully. (tx: {})",
-    //             event.taskId,
-    //             tx_hash
-    //         )
-    //     }
-    //     Err(e) => log::error!("Could not process task: {}", e),
-    // }
+    Ok(response_tx_hash)
 }
 
 /// Handles a generation request.
@@ -76,10 +65,11 @@ async fn handle_generation(
     node: &DriaOracle,
     models: &ModelConfig,
     task_id: U256,
-) -> Result<TxHash> {
+) -> Result<Option<TxHash>> {
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address) {
-        return Err(eyre!("Already responded to {} with generation", task_id));
+        log::debug!("Already responded to {} with generation", task_id);
+        return Ok(None);
     }
 
     let request = node
@@ -88,9 +78,9 @@ async fn handle_generation(
         .wrap_err("Could not get task")?;
 
     // choose model based on the request
-    let models_str = bytes_to_string(&request.models)?;
-    let (_, model) = models.get_any_matching_model_from_csv(models_str)?;
-
+    let models_string = bytes_to_string(&request.models)?;
+    let (_, model) = models.get_any_matching_model_from_csv(&models_string)?;
+    log::debug!("Using model: {} from {}", model, models_string);
     // execute task
     let executor = Executor::new(model);
     let (output_str, metadata_str) = executor.execute_raw(&request.input).await?;
@@ -112,7 +102,7 @@ async fn handle_generation(
     let tx_hash = node
         .respond_generation(task_id, output, metadata, nonce)
         .await?;
-    Ok(tx_hash)
+    Ok(Some(tx_hash))
 }
 
 /// Handles a validation request.
@@ -121,14 +111,15 @@ async fn handle_validation(
     node: &DriaOracle,
     models: &ModelConfig,
     task_id: U256,
-) -> Result<TxHash> {
+) -> Result<Option<TxHash>> {
     // check if already responded as generator, because we cant validate our own answer
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address) {
-        return Err(eyre!(
+        log::debug!(
             "Cant validate {} with your own generation response",
             task_id
-        ));
+        );
+        return Ok(None);
     }
 
     // check if we have validated anyways
@@ -137,10 +128,7 @@ async fn handle_validation(
         return Err(eyre!("Already validated {}", task_id));
     }
 
-    let request = node
-        .get_task_request(task_id)
-        .await
-        .wrap_err("Could not get task")?;
+    let request = node.get_task_request(task_id).await?;
 
     // TODO: validate responses
     let scores = (0..request.numGenerations)
@@ -162,5 +150,5 @@ async fn handle_validation(
     let tx_hash = node
         .respond_validation(task_id, scores, metadata, nonce)
         .await?;
-    Ok(tx_hash)
+    Ok(Some(tx_hash))
 }
