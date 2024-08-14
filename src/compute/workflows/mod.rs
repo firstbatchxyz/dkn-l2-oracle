@@ -30,13 +30,18 @@ pub fn split_comma_separated(input: Option<&str>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
+
     use super::*;
     use alloy::primitives::Bytes;
-    use ollama_workflows::{Executor, Model, ProgramMemory};
+    use ollama_workflows::{Entry, Executor, Model, ProgramMemory};
 
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
+        dotenvy::dotenv().unwrap();
+        env::set_var("RUST_LOG", "debug");
+        env_logger::try_init().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
             .execute_raw(&Bytes::from_static(
@@ -53,7 +58,10 @@ mod tests {
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
-        let executor = Executor::new(Model::GPT3_5Turbo);
+        dotenvy::dotenv().unwrap();
+        env::set_var("RUST_LOG", "debug");
+        env_logger::try_init().unwrap();
+        let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
             .execute_raw(&Bytes::from_static(
                 "What is the result of 2 + 2?".as_bytes(),
@@ -69,10 +77,14 @@ mod tests {
     /// Test the generation workflow with a plain input.
     #[tokio::test]
     async fn test_workflow_plain() {
+        dotenvy::dotenv().unwrap();
+        env::set_var("RUST_LOG", "debug");
+        env_logger::try_init().unwrap();
         let executor = Executor::new(Model::GPT4o);
-        let workflow = executor.get_generation_workflow().unwrap();
         let mut memory = ProgramMemory::new();
-        let output = executor.execute(None, workflow, &mut memory).await;
+        let workflow = executor.get_generation_workflow().unwrap();
+        let input = Entry::try_value_or_str("What is 2 + 2?");
+        let output = executor.execute(Some(&input), workflow, &mut memory).await;
         println!("Output:\n{}", output);
     }
 }
