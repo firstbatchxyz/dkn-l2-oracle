@@ -4,8 +4,8 @@ use crate::{
     DriaOracle,
 };
 use alloy::{
-    primitives::{utils::parse_ether, Bytes, TxHash, U256},
-    rpc::types::Log,
+    primitives::{utils::parse_ether, Bytes, U256},
+    rpc::types::TransactionReceipt,
 };
 use eyre::{eyre, Context, Result};
 use ollama_workflows::Executor;
@@ -17,13 +17,8 @@ pub async fn handle_request(
     kinds: &[OracleKind],
     model_config: &ModelConfig,
     event: StatusUpdate,
-    log: Log,
-) -> Result<Option<TxHash>> {
-    log::debug!(
-        "Received event for task {} (tx: {})",
-        event.taskId,
-        log.transaction_hash.unwrap_or_default()
-    );
+) -> Result<Option<TransactionReceipt>> {
+    log::debug!("Received event for task {}", event.taskId);
 
     let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
@@ -65,7 +60,7 @@ async fn handle_generation(
     node: &DriaOracle,
     models: &ModelConfig,
     task_id: U256,
-) -> Result<Option<TxHash>> {
+) -> Result<Option<TransactionReceipt>> {
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address()) {
         log::debug!("Already responded to {} with generation", task_id);
@@ -111,7 +106,7 @@ async fn handle_validation(
     node: &DriaOracle,
     models: &ModelConfig,
     task_id: U256,
-) -> Result<Option<TxHash>> {
+) -> Result<Option<TransactionReceipt>> {
     // check if already responded as generator, because we cant validate our own answer
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address()) {

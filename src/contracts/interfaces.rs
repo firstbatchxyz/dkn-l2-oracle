@@ -1,12 +1,22 @@
 use alloy::{primitives::Bytes, sol};
 use eyre::{Context, Result};
 
+use self::OracleCoordinator::StatusUpdate;
+
 // OpenZepeplin ERC20
 sol!(
     #[allow(missing_docs)]
     #[sol(rpc)]
     ERC20,
     "./src/contracts/abi/ERC20.json"
+);
+
+// Base WETH
+sol!(
+    #[allow(missing_docs)]
+    #[sol(rpc)]
+    WETH,
+    "./src/contracts/abi/IWETH9.json"
 );
 
 sol!(
@@ -22,11 +32,6 @@ sol!(
     OracleCoordinator,
     "./src/contracts/abi/LLMOracleCoordinator.json"
 );
-
-/// Small utility to convert bytes to string.
-pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
-    String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
-}
 
 /// `TaskStatus` as it appears within the coordinator.
 #[derive(Debug, Clone, Copy, Default)]
@@ -61,11 +66,21 @@ impl TryFrom<u8> for TaskStatus {
 impl std::fmt::Display for TaskStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TaskStatus::None => write!(f, "None"),
-            TaskStatus::PendingGeneration => write!(f, "Pending Generation"),
-            TaskStatus::PendingValidation => write!(f, "Pending Validation"),
-            TaskStatus::Completed => write!(f, "Completed"),
+            Self::None => write!(f, "None"),
+            Self::PendingGeneration => write!(f, "Pending Generation"),
+            Self::PendingValidation => write!(f, "Pending Validation"),
+            Self::Completed => write!(f, "Completed"),
         }
+    }
+}
+
+impl std::fmt::Display for StatusUpdate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Task {}: {} -> {}",
+            self.taskId, self.statusBefore, self.statusAfter
+        )
     }
 }
 
@@ -121,4 +136,9 @@ impl std::fmt::Display for OracleKind {
             OracleKind::Validator => write!(f, "Validator"),
         }
     }
+}
+
+/// Small utility to convert bytes to string.
+pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
+    String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
 }

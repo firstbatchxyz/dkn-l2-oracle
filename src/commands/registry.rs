@@ -22,6 +22,18 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
                 format_ether(difference),
                 kind
             );
+
+            // check balance
+            let balance = node.get_token_balance(node.address()).await?;
+            if balance.amount < difference {
+                return Err(eyre::eyre!(
+                    "Not enough balance to approve. (have: {}, required: {})",
+                    balance,
+                    difference
+                ));
+            }
+
+            // approve the difference
             node.approve(node.contract_addresses.registry, difference)
                 .await?;
         } else {

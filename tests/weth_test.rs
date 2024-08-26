@@ -1,19 +1,6 @@
-use alloy::{
-    primitives::{address, utils::parse_ether, Address},
-    sol,
-};
-use dkn_oracle::{DriaOracle, DriaOracleConfig};
+use alloy::primitives::utils::parse_ether;
+use dkn_oracle::{DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;
-
-// Base WETH
-sol!(
-    #[allow(missing_docs)]
-    #[sol(rpc)]
-    WETH,
-    "./src/contracts/abi/IWETH9.json"
-);
-
-const WETH_ADDR: Address = address!("4200000000000000000000000000000000000006");
 
 /// Using the forked blockchain, creates two accounts (alice, bob) and then,
 ///
@@ -22,28 +9,23 @@ const WETH_ADDR: Address = address!("4200000000000000000000000000000000000006");
 /// 3. Bob transfers WETH from Alice
 #[tokio::test]
 async fn test_weth_transfer() -> Result<()> {
+    // amount of WETH that will be transferred
+    let amount = parse_ether("100")?;
+
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::anvil_new(config).await?;
 
-    let init_balance = parse_ether("999")?;
-
     // setup alice
-    let alice = node.connect(node.anvil_funded_wallet(Some(init_balance)).await?);
-    let alice_token = WETH::new(WETH_ADDR, &alice.provider);
+    let alice = node.connect(node.anvil_funded_wallet(None).await?);
+    let alice_token = WETH::new(node.contract_addresses.token, &alice.provider);
 
     // setup bob
-    let bob = node.connect(node.anvil_funded_wallet(Some(init_balance)).await?);
-    let bob_token = WETH::new(WETH_ADDR, &bob.provider);
+    let bob = node.connect(node.anvil_funded_wallet(None).await?);
+    let bob_token = WETH::new(node.contract_addresses.token, &bob.provider);
 
-    // set balances
-    let alice_balance = node.get_native_balance(alice.address()).await?;
-    let bob_balance = node.get_native_balance(bob.address()).await?;
-    assert_eq!(alice_balance.amount, init_balance);
-    assert_eq!(bob_balance.amount, init_balance);
-
+    // record existing balances
     let alice_balance_before = node.get_token_balance(alice.address()).await?;
     let bob_balance_before = node.get_token_balance(bob.address()).await?;
-    let amount = parse_ether("100")?;
 
     // alice buys WETH
     let _ = alice_token.deposit().value(amount).send().await?;

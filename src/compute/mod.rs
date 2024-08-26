@@ -1,4 +1,3 @@
-// TODO: add ollama
 mod handlers;
 pub use handlers::*;
 

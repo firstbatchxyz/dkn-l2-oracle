@@ -44,9 +44,7 @@ mod tests {
         env_logger::try_init().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
-            .execute_raw(&Bytes::from_static(
-                "What is the result of 2 + 2?".as_bytes(),
-            ))
+            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
             .await
             .unwrap();
 
@@ -63,9 +61,7 @@ mod tests {
         env_logger::try_init().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
-            .execute_raw(&Bytes::from_static(
-                "What is the result of 2 + 2?".as_bytes(),
-            ))
+            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
             .await
             .unwrap();
 

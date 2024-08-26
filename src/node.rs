@@ -10,11 +10,11 @@ use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
 use alloy::providers::WalletProvider;
-use alloy::rpc::types::Log;
+use alloy::rpc::types::{Log, TransactionReceipt};
 use alloy::signers::local::PrivateKeySigner;
 use alloy::{
     network::{Ethereum, EthereumWallet},
-    primitives::{Address, TxHash, U256},
+    primitives::{Address, U256},
     providers::{Identity, Provider, ProviderBuilder, RootProvider},
     transports::http::{Client, Http},
 };
@@ -85,9 +85,10 @@ impl DriaOracle {
         Ok(node)
     }
 
-    /// Uses the given wallet for the underlying provider.
+    /// Creates a new node with the given wallet.
     ///
-    /// Creates a new node.
+    /// - Provider is cloned and its wallet is mutated.
+    /// - Config is cloned and its wallet & address are updated.
     pub fn connect(&self, wallet: EthereumWallet) -> Self {
         let mut provider = self.provider.clone();
         *provider.wallet_mut() = wallet.clone();
@@ -143,7 +144,7 @@ impl DriaOracle {
         difficulty: u8,
         num_gens: u64,
         num_vals: u64,
-    ) -> Result<TxHash> {
+    ) -> Result<TransactionReceipt> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
@@ -155,12 +156,12 @@ impl DriaOracle {
             .wrap_err("Could not request task.")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     /// Register the oracle with the registry.
-    pub async fn register(&self, kind: OracleKind) -> Result<TxHash> {
+    pub async fn register(&self, kind: OracleKind) -> Result<TransactionReceipt> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let req = registry.register(kind.into());
@@ -171,12 +172,12 @@ impl DriaOracle {
             .wrap_err(eyre!("Could not register."))?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     /// Unregister from the oracle registry.
-    pub async fn unregister(&self, kind: OracleKind) -> Result<TxHash> {
+    pub async fn unregister(&self, kind: OracleKind) -> Result<TransactionReceipt> {
         let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let req = registry.unregister(kind.into());
@@ -187,8 +188,8 @@ impl DriaOracle {
             .wrap_err("Could not unregister.")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     pub async fn is_registered(&self, kind: OracleKind) -> Result<bool> {
@@ -201,18 +202,23 @@ impl DriaOracle {
         Ok(is_registered._0)
     }
 
-    pub async fn transfer_from(&self, from: Address, to: Address, amount: U256) -> Result<TxHash> {
+    pub async fn transfer_from(
+        &self,
+        from: Address,
+        to: Address,
+        amount: U256,
+    ) -> Result<TransactionReceipt> {
         let token = ERC20::new(self.contract_addresses.token, &self.provider);
 
         let req = token.transferFrom(from, to, amount);
         let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
-    pub async fn approve(&self, spender: Address, amount: U256) -> Result<TxHash> {
+    pub async fn approve(&self, spender: Address, amount: U256) -> Result<TransactionReceipt> {
         let token = ERC20::new(self.contract_addresses.token, &self.provider);
 
         let req = token.approve(spender, amount);
@@ -223,8 +229,8 @@ impl DriaOracle {
             .wrap_err("Could not approve tokens.")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     pub async fn allowance(&self, owner: Address, spender: Address) -> Result<TokenBalance> {
@@ -293,7 +299,7 @@ impl DriaOracle {
         response: Bytes,
         metadata: Bytes,
         nonce: U256,
-    ) -> Result<TxHash> {
+    ) -> Result<TransactionReceipt> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
@@ -301,8 +307,8 @@ impl DriaOracle {
         let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     pub async fn respond_validation(
@@ -311,7 +317,7 @@ impl DriaOracle {
         scores: Vec<U256>,
         metadata: Bytes,
         nonce: U256,
-    ) -> Result<TxHash> {
+    ) -> Result<TransactionReceipt> {
         let coordinator =
             OracleCoordinator::new(self.contract_addresses.coordinator, &self.provider);
 
@@ -319,8 +325,8 @@ impl DriaOracle {
         let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let awaited_tx_hash = tx.watch().await?;
-        Ok(awaited_tx_hash)
+        let receipt = tx.get_receipt().await?;
+        Ok(receipt)
     }
 
     /// Subscribes to events & processes tasks.
@@ -440,6 +446,9 @@ impl DriaOracle {
 
 #[cfg(feature = "anvil")]
 impl DriaOracle {
+    /// Default ETH funding amount for generated wallets.
+    const ANVIL_FUND_ETHER: &'static str = "10000";
+
     /// Creates a new Anvil instance that forks the chain at the configured RPC URL.
     ///
     /// Return the node instance and the Anvil instance.
@@ -455,7 +464,7 @@ impl DriaOracle {
     ///
     /// If `fund` is not provided, 10K ETH is used.
     pub async fn anvil_funded_wallet(&self, fund: Option<U256>) -> Result<EthereumWallet> {
-        let fund = fund.unwrap_or_else(|| parse_ether("10000").unwrap());
+        let fund = fund.unwrap_or_else(|| parse_ether(Self::ANVIL_FUND_ETHER).unwrap());
         let signer = PrivateKeySigner::random();
         self.provider
             .anvil_set_balance(signer.address(), fund)

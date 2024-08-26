@@ -5,9 +5,12 @@ mod node;
 pub use node::DriaOracle;
 
 mod compute;
-pub use compute::mine_nonce;
+pub use compute::{handle_request, mine_nonce, ModelConfig};
 
 mod contracts;
+pub use contracts::{
+    bytes_to_string, OracleCoordinator, OracleKind, OracleRegistry, TaskStatus, ERC20, WETH,
+};
 
 // commands are exported for integration tests
 pub mod commands;

@@ -47,9 +47,18 @@ pub async fn run_oracle(
                 TaskStatus::try_from(event.statusBefore).unwrap_or_default(),
                 TaskStatus::try_from(event.statusAfter).unwrap_or_default()
             );
-            match handle_request(node, &kinds, &model_config, event, log).await {
-                Ok(Some(tx_hash)) => {
-                    log::info!("Task {} processed successfully. (tx: {})", task_id, tx_hash)
+            log::debug!(
+                "Handling task {} (tx: {})",
+                task_id,
+                log.transaction_hash.unwrap_or_default()
+            );
+            match handle_request(node, &kinds, &model_config, event).await {
+                Ok(Some(receipt)) => {
+                    log::info!(
+                        "Task {} processed successfully. (tx: {})",
+                        task_id,
+                        receipt.transaction_hash
+                    )
                 }
                 Ok(None) => {
                     log::info!("Task {} ignored.", task_id)
@@ -80,9 +89,18 @@ pub async fn run_oracle(
             match log {
                 Ok((event, log)) => {
                     let task_id = event.taskId;
-                    match handle_request(node, &kinds, &model_config, event, log).await {
-                        Ok(Some(tx_hash)) => {
-                            log::info!("Task {} processed successfully. (tx: {})", task_id, tx_hash)
+                    log::debug!(
+                        "Handling task {} (tx: {})",
+                        task_id,
+                        log.transaction_hash.unwrap_or_default()
+                    );
+                    match handle_request(node, &kinds, &model_config, event).await {
+                        Ok(Some(receipt)) => {
+                            log::info!(
+                                "Task {} processed successfully. (tx: {})",
+                                task_id,
+                                receipt.transaction_hash
+                            )
                         }
                         Ok(None) => {
                             log::info!("Task {} ignored.", task_id)

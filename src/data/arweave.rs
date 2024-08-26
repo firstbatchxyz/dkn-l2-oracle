@@ -56,8 +56,8 @@ impl OracleExternalData for Arweave {
         Ok(response_bytes)
     }
 
-    // TODO: implement Arweave client
     async fn put(&self, _: Self::Value) -> Self::Key {
+        // TODO: implement Arweave client
         unimplemented!("not implemented")
     }
 
