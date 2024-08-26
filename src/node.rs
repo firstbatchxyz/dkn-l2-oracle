@@ -3,11 +3,15 @@ use crate::{contracts::*, DriaOracleConfig};
 use alloy::contract::EventPoller;
 use alloy::eips::BlockNumberOrTag;
 use alloy::node_bindings::{Anvil, AnvilInstance};
+use alloy::primitives::utils::parse_ether;
 use alloy::primitives::Bytes;
+use alloy::providers::ext::AnvilApi;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
+use alloy::providers::WalletProvider;
 use alloy::rpc::types::Log;
+use alloy::signers::local::PrivateKeySigner;
 use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{Address, TxHash, U256},
@@ -36,26 +40,23 @@ type DriaOracleProvider = FillProvider<
 
 pub struct DriaOracle {
     pub config: DriaOracleConfig,
-    pub address: Address,
     pub contract_addresses: ContractAddresses,
     pub provider: DriaOracleProvider,
 }
 
-impl DriaOracle {
-    /// Creates a new Anvil instance that forks the chain at the configured RPC URL.
-    ///
-    /// Return the node instance and the Anvil instance.
-    /// Note that when Anvil instance is dropped, you will lose the forked chain.
-    pub async fn new_anvil(mut config: DriaOracleConfig) -> Result<(Self, AnvilInstance)> {
-        let anvil = Anvil::new().fork(config.rpc_url.to_string()).try_spawn()?;
-        let anvil_rpc_url = anvil.endpoint_url();
-
-        let config = config.with_rpc_url(anvil_rpc_url);
-        let node = Self::new(config.to_owned()).await?;
-
-        Ok((node, anvil))
+impl core::fmt::Display for DriaOracle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}",
+            env!("CARGO_PKG_VERSION"),
+            self.address(),
+            self.config.rpc_url,
+        )
     }
+}
 
+impl DriaOracle {
     /// Creates a new oracle node with the given private key and connected to the chain at the given RPC URL.
     ///
     /// The contract addresses are chosen based on the chain id returned from the provider.
@@ -73,7 +74,6 @@ impl DriaOracle {
         let contract_addresses = ADDRESSES[&chain].clone();
 
         let node = Self {
-            address: config.address,
             config,
             contract_addresses,
             provider,
@@ -83,6 +83,26 @@ impl DriaOracle {
         node.check_contract_tokens().await?;
 
         Ok(node)
+    }
+
+    /// Uses the given wallet for the underlying provider.
+    ///
+    /// Creates a new node.
+    pub fn connect(&self, wallet: EthereumWallet) -> Self {
+        let mut provider = self.provider.clone();
+        *provider.wallet_mut() = wallet.clone();
+
+        let mut config = self.config.clone();
+        config.address = wallet.default_signer().address();
+        config.wallet = wallet;
+
+        let contract_addresses = self.contract_addresses.clone();
+
+        Self {
+            provider,
+            config,
+            contract_addresses,
+        }
     }
 
     /// Returns the connected chain.
@@ -175,7 +195,7 @@ impl DriaOracle {
         let registry = OracleRegistry::new(self.contract_addresses.registry, &self.provider);
 
         let is_registered = registry
-            .isRegistered(self.address, kind.into())
+            .isRegistered(self.address(), kind.into())
             .call()
             .await?;
         Ok(is_registered._0)
@@ -410,16 +430,37 @@ impl DriaOracle {
 
         Ok((request, responses, validations))
     }
+
+    /// Returns the address of the oracle from underlying config.
+    #[inline(always)]
+    pub fn address(&self) -> Address {
+        self.config.address
+    }
 }
 
-impl core::fmt::Display for DriaOracle {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Dria Oracle Node v{}\nAddress: {}\nRPC URL: {}",
-            env!("CARGO_PKG_VERSION"),
-            self.address,
-            self.config.rpc_url,
-        )
+#[cfg(feature = "anvil")]
+impl DriaOracle {
+    /// Creates a new Anvil instance that forks the chain at the configured RPC URL.
+    ///
+    /// Return the node instance and the Anvil instance.
+    /// Note that when Anvil instance is dropped, you will lose the forked chain.
+    pub async fn anvil_new(config: DriaOracleConfig) -> Result<(Self, AnvilInstance)> {
+        let anvil = Anvil::new().fork(config.rpc_url.to_string()).try_spawn()?;
+        let node = Self::new(config.with_rpc_url(anvil.endpoint_url())).await?;
+
+        Ok((node, anvil))
+    }
+
+    /// Generates a random wallet, funded with the given `fund` amount.
+    ///
+    /// If `fund` is not provided, 10K ETH is used.
+    pub async fn anvil_funded_wallet(&self, fund: Option<U256>) -> Result<EthereumWallet> {
+        let fund = fund.unwrap_or_else(|| parse_ether("10000").unwrap());
+        let signer = PrivateKeySigner::random();
+        self.provider
+            .anvil_set_balance(signer.address(), fund)
+            .await?;
+        let wallet = EthereumWallet::from(signer);
+        Ok(wallet)
     }
 }

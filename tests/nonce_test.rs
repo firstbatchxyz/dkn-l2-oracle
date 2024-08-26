@@ -26,14 +26,14 @@ sol! {
 #[tokio::test]
 async fn test_nonce_contract() -> Result<()> {
     let config = DriaOracleConfig::new_from_env()?;
-    let (node, _anvil) = DriaOracle::new_anvil(config).await?;
+    let (node, _anvil) = DriaOracle::anvil_new(config).await?;
     let contract = TestNonce::deploy(&node.provider).await?;
 
     // prepare parameters
     let difficulty = 2u8;
     let task_id = U256::from(1);
     let requester = address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
-    let responder = node.address;
+    let responder = node.address();
     let input = Bytes::from_iter("im some bytes yallllll".bytes());
 
     // call contract

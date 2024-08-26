@@ -67,7 +67,7 @@ async fn handle_generation(
     task_id: U256,
 ) -> Result<Option<TxHash>> {
     let responses = node.get_task_responses(task_id).await?;
-    if responses.iter().any(|r| r.responder == node.address) {
+    if responses.iter().any(|r| r.responder == node.address()) {
         log::debug!("Already responded to {} with generation", task_id);
         return Ok(None);
     }
@@ -92,7 +92,7 @@ async fn handle_generation(
     let nonce = mine_nonce(
         request.difficulty,
         &request.requester,
-        &node.address,
+        &node.address(),
         &request.input,
         &task_id,
     )
@@ -114,7 +114,7 @@ async fn handle_validation(
 ) -> Result<Option<TxHash>> {
     // check if already responded as generator, because we cant validate our own answer
     let responses = node.get_task_responses(task_id).await?;
-    if responses.iter().any(|r| r.responder == node.address) {
+    if responses.iter().any(|r| r.responder == node.address()) {
         log::debug!(
             "Cant validate {} with your own generation response",
             task_id
@@ -124,7 +124,7 @@ async fn handle_validation(
 
     // check if we have validated anyways
     let validations = node.get_task_validations(task_id).await?;
-    if validations.iter().any(|v| v.validator == node.address) {
+    if validations.iter().any(|v| v.validator == node.address()) {
         return Err(eyre!("Already validated {}", task_id));
     }
 
@@ -141,7 +141,7 @@ async fn handle_validation(
     let nonce = mine_nonce(
         request.difficulty,
         &request.requester,
-        &node.address,
+        &node.address(),
         &request.input,
         &task_id,
     )

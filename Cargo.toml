@@ -5,6 +5,14 @@ edition = "2021"
 license = "Apache-2.0"
 readme = "README.md"
 
+[features]
+anvil = ["alloy/node-bindings"]
+
+# you may need to add "rust-analyzer.cargo.features": "all"
+# to your .vscode/settings.json
+[profile.test]
+default = ["anvil"]
+
 [dependencies]
 # core
 alloy = { version = "0.2.1", features = ["full", "node-bindings"] }

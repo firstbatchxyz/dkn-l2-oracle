@@ -10,11 +10,11 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct ContractAddresses {
     /// Token used within the registry and coordinator.
-    pub(crate) token: Address,
+    pub token: Address,
     /// Oracle registry.
-    pub(crate) registry: Address,
+    pub registry: Address,
     /// Oracle coordinator.
-    pub(crate) coordinator: Address,
+    pub coordinator: Address,
 }
 
 impl std::fmt::Display for ContractAddresses {

@@ -65,9 +65,9 @@ impl DriaOracleConfig {
     /// Creates a new local configuration.
     pub fn new_local() -> Self {
         // first account of Anvil/Hardhat
-        let secret_key =
-            B256::from_hex("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-                .unwrap();
+        let secret_key = B256::from_slice(&hex_literal::hex!(
+            "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+        ));
 
         // default url is Anvil/Hardhat
         let rpc_url = Url::parse("http://localhost:8545").unwrap();
@@ -76,8 +76,15 @@ impl DriaOracleConfig {
     }
 
     /// Change the RPC URL.
-    pub fn with_rpc_url(&mut self, rpc_url: Url) -> &mut Self {
+    pub fn with_rpc_url(mut self, rpc_url: Url) -> Self {
         self.rpc_url = rpc_url;
+        self
+    }
+
+    /// Change the Wallet.
+    pub fn with_wallet(mut self, wallet: EthereumWallet) -> Self {
+        self.address = wallet.default_signer().address();
+        self.wallet = wallet;
         self
     }
 

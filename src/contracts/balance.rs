@@ -1,4 +1,5 @@
 use alloy::primitives::{utils::format_ether, Address, U256};
+use std::fmt::Display;
 
 /// A token balance contains amount, token symbol and the token address if its non-native token.
 #[derive(Debug)]
@@ -22,7 +23,7 @@ impl TokenBalance {
     }
 }
 
-impl std::fmt::Display for TokenBalance {
+impl Display for TokenBalance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

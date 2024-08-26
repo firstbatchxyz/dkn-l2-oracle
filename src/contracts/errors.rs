@@ -142,29 +142,26 @@ impl From<OracleCoordinatorErrors> for ErrReport {
 #[cfg(test)]
 mod tests {
     use crate::{contracts::OracleKind, DriaOracle, DriaOracleConfig};
-    use alloy::{
-        primitives::{utils::parse_ether, Address},
-        providers::Provider,
-    };
+    use alloy::providers::Provider;
 
     #[tokio::test]
     async fn test_registry_error() -> eyre::Result<()> {
         let config = DriaOracleConfig::new_from_env()?.enable_logs();
-        let (node, _anvil) = DriaOracle::new_anvil(config).await?;
+        let (node, _anvil) = DriaOracle::anvil_new(config).await?;
         assert!(node.provider.get_block_number().await? > 1);
 
         // tries to register if registered, or opposite, to trigger an error
-        let kind = OracleKind::Generator;
-        let result = if node.is_registered(kind).await? {
-            node.register(kind).await
+        const KIND: OracleKind = OracleKind::Generator;
+        let result = if node.is_registered(KIND).await? {
+            node.register(KIND).await
         } else {
-            node.unregister(kind).await
+            node.unregister(KIND).await
         };
         assert!(result.is_err());
 
         // both errors include the node address in their message, which we look for here:
         let err = result.unwrap_err();
-        err.to_string().contains(&node.address.to_string());
+        err.to_string().contains(&node.address().to_string());
 
         Ok(())
     }
