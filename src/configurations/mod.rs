@@ -81,22 +81,26 @@ impl DriaOracleConfig {
         self
     }
 
-    /// Change the Wallet.
+    /// Change the underlying wallet.
     pub fn with_wallet(mut self, wallet: EthereumWallet) -> Self {
         self.address = wallet.default_signer().address();
         self.wallet = wallet;
         self
     }
 
-    /// Enables `env_logger`
+    /// Enables `env_logger`.
     pub fn enable_logs(self) -> Self {
-        env_logger::init();
+        if let Err(e) = env_logger::try_init() {
+            log::error!("Error during env_logger::try_init: {}", e);
+        }
         self
     }
 
     /// Enables colored `eyre` error reports.
     pub fn enable_color_eyre(self) -> Result<Self> {
-        color_eyre::install()?;
+        if let Err(e) = color_eyre::install() {
+            log::error!("Error during color_eyre::install: {}", e);
+        }
         Ok(self)
     }
 

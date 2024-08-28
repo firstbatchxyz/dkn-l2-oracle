@@ -10,7 +10,7 @@ use eyre::Result;
 use ollama_workflows::Model;
 
 #[tokio::test]
-#[ignore = "run manually"]
+// #[ignore = "run manually"]
 async fn test_oracle_request() -> Result<()> {
     // task setup
     let difficulty = 1;

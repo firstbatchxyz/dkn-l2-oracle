@@ -155,7 +155,7 @@ impl ModelConfig {
         &self,
         csv_model_or_provider: &str,
     ) -> Result<(ModelProvider, Model)> {
-        self.get_any_matching_model(split_comma_separated(Some(&csv_model_or_provider)))
+        self.get_any_matching_model(split_comma_separated(Some(csv_model_or_provider)))
     }
 
     /// From a list of model or provider names, return a random matching model & provider.

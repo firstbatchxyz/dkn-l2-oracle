@@ -50,7 +50,7 @@ mod tests {
 
         // funny test but it should pass
         println!("Output:\n{}", output);
-        // assert!(output.contains('4'));
+        assert!(output.contains('4'));
     }
 
     #[tokio::test]
@@ -67,7 +67,7 @@ mod tests {
 
         // funny test but it should pass
         println!("Output:\n{}", output);
-        // assert!(output.contains('4'));
+        assert!(output.contains('4'));
     }
 
     /// Test the generation workflow with a plain input.

@@ -2,16 +2,12 @@ use crate::{contracts::*, DriaOracleConfig};
 
 use alloy::contract::EventPoller;
 use alloy::eips::BlockNumberOrTag;
-use alloy::node_bindings::{Anvil, AnvilInstance};
-use alloy::primitives::utils::parse_ether;
 use alloy::primitives::Bytes;
-use alloy::providers::ext::AnvilApi;
 use alloy::providers::fillers::{
     ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
 use alloy::providers::WalletProvider;
 use alloy::rpc::types::{Log, TransactionReceipt};
-use alloy::signers::local::PrivateKeySigner;
 use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{Address, U256},
@@ -24,6 +20,14 @@ use std::env;
 use OracleCoordinator::{
     getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
     TaskValidation,
+};
+
+#[cfg(feature = "anvil")]
+use alloy::{
+    node_bindings::{Anvil, AnvilInstance},
+    primitives::utils::parse_ether,
+    providers::ext::AnvilApi,
+    signers::local::PrivateKeySigner,
 };
 
 // TODO: use a better type for these
@@ -366,7 +370,7 @@ impl DriaOracle {
             .provider
             .get_code_at(self.contract_addresses.coordinator)
             .await
-            .and_then(|s| Ok(s.len()))?;
+            .map(|s| s.len())?;
         if coordinator_size == 0 {
             return Err(eyre!("Coordinator contract not deployed."));
         }
@@ -374,7 +378,7 @@ impl DriaOracle {
             .provider
             .get_code_at(self.contract_addresses.registry)
             .await
-            .and_then(|s| Ok(s.len()))?;
+            .map(|s| s.len())?;
         if registry_size == 0 {
             return Err(eyre!("Registry contract not deployed."));
         }
@@ -382,7 +386,7 @@ impl DriaOracle {
             .provider
             .get_code_at(self.contract_addresses.token)
             .await
-            .and_then(|s| Ok(s.len()))?;
+            .map(|s| s.len())?;
         if token_size == 0 {
             return Err(eyre!("Token contract not deployed."));
         }

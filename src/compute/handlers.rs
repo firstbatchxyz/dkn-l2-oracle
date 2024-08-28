@@ -23,7 +23,7 @@ pub async fn handle_request(
     let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
             if kinds.contains(&OracleKind::Generator) {
-                handle_generation(node, &model_config, event.taskId).await?
+                handle_generation(node, model_config, event.taskId).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not generator.",
@@ -34,7 +34,7 @@ pub async fn handle_request(
         }
         TaskStatus::PendingValidation => {
             if kinds.contains(&OracleKind::Validator) {
-                handle_validation(node, &model_config, event.taskId).await?
+                handle_validation(node, model_config, event.taskId).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not validator.",

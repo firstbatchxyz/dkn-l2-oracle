@@ -47,6 +47,10 @@ format:
 version:
 	  @cargo pkgid | cut -d# -f2
 
+.PHONY: test #         | Run tests
+test:
+		cargo test --all-features
+
 ###############################################################################
 # abi source can be given from outside, and defaults as shown here
 ABI_SRC_PATH?=../dria-contracts/artifacts
