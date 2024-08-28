@@ -17,11 +17,11 @@ async fn test_weth_transfer() -> Result<()> {
 
     // setup alice
     let alice = node.connect(node.anvil_funded_wallet(None).await?);
-    let alice_token = WETH::new(node.contract_addresses.token, &alice.provider);
+    let alice_token = WETH::new(node.addresses.token, &alice.provider);
 
     // setup bob
     let bob = node.connect(node.anvil_funded_wallet(None).await?);
-    let bob_token = WETH::new(node.contract_addresses.token, &bob.provider);
+    let bob_token = WETH::new(node.addresses.token, &bob.provider);
 
     // record existing balances
     let alice_balance_before = node.get_token_balance(alice.address()).await?;

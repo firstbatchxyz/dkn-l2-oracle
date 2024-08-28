@@ -1,8 +1,5 @@
 use alloy::{
-    hex::FromHex,
-    network::EthereumWallet,
-    primitives::{Address, B256},
-    signers::local::PrivateKeySigner,
+    hex::FromHex, network::EthereumWallet, primitives::B256, signers::local::PrivateKeySigner,
     transports::http::reqwest::Url,
 };
 
@@ -13,7 +10,6 @@ use std::env;
 #[derive(Debug, Clone)]
 pub struct DriaOracleConfig {
     pub wallet: EthereumWallet,
-    pub address: Address,
     pub rpc_url: Url,
 }
 
@@ -30,14 +26,9 @@ impl DriaOracleConfig {
     pub fn new(secret_key: &B256, rpc_url: Url) -> Result<Self> {
         let signer =
             PrivateKeySigner::from_bytes(secret_key).wrap_err("Could not parse private key")?;
-        let address = signer.address();
         let wallet = EthereumWallet::from(signer);
 
-        Ok(Self {
-            wallet,
-            address,
-            rpc_url,
-        })
+        Ok(Self { wallet, rpc_url })
     }
 
     /// Creates the config from the environment variables.
@@ -83,7 +74,6 @@ impl DriaOracleConfig {
 
     /// Change the underlying wallet.
     pub fn with_wallet(mut self, wallet: EthereumWallet) -> Self {
-        self.address = wallet.default_signer().address();
         self.wallet = wallet;
         self
     }
@@ -108,14 +98,12 @@ impl DriaOracleConfig {
     pub fn with_secret_key(&mut self, secret_key: &B256) -> Result<&mut Self> {
         let signer =
             PrivateKeySigner::from_bytes(secret_key).wrap_err("Could not parse private key")?;
-        self.address = signer.address();
         self.wallet.register_default_signer(signer);
         Ok(self)
     }
 
     /// Change the signer with a new one.
     pub fn with_signer(&mut self, signer: PrivateKeySigner) -> &mut Self {
-        self.address = signer.address();
         self.wallet.register_default_signer(signer);
         self
     }

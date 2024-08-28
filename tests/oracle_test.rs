@@ -31,7 +31,7 @@ async fn test_oracle_request() -> Result<()> {
     // buy some WETH for all people
     let amount = parse_ether("100").unwrap();
     for node in [&requester, &generator, &validator] {
-        let token = WETH::new(node.contract_addresses.token, &node.provider);
+        let token = WETH::new(node.addresses.token, &node.provider);
         let balance_before = node.get_token_balance(node.address()).await?;
         let _ = token.deposit().value(amount).send().await?;
         let balance_after = node.get_token_balance(node.address()).await?;
@@ -48,7 +48,7 @@ async fn test_oracle_request() -> Result<()> {
 
     // approve some tokens for the coordinator from requester
     requester
-        .approve(node.contract_addresses.coordinator, amount)
+        .approve(node.addresses.coordinator, amount)
         .await?;
 
     // make a request with just one generation and validation request
@@ -56,7 +56,7 @@ async fn test_oracle_request() -> Result<()> {
 
     // handle generation by reading the latest event
     let tasks = node
-        .get_tasks(
+        .get_tasks_in_range(
             request_receipt.block_number.unwrap(),
             BlockNumberOrTag::Latest,
         )
@@ -73,7 +73,7 @@ async fn test_oracle_request() -> Result<()> {
 
     // handle validation by reading the latest event
     let tasks = node
-        .get_tasks(
+        .get_tasks_in_range(
             generation_receipt.block_number.unwrap(),
             BlockNumberOrTag::Latest,
         )
@@ -89,7 +89,7 @@ async fn test_oracle_request() -> Result<()> {
             .unwrap();
 
     let tasks = node
-        .get_tasks(
+        .get_tasks_in_range(
             validation_receipt.block_number.unwrap(),
             BlockNumberOrTag::Latest,
         )

@@ -47,6 +47,6 @@ async-trait = "0.1.81"
 bytes = "1.7.1"
 rand = "0.8.5"
 
-[[bin]]
-name = "request"
-path = 'bin/request.rs'
+# [[bin]]
+# name = "request"
+# path = 'bin/request.rs'

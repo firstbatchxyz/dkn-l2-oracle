@@ -5,7 +5,7 @@ use alloy::{
     primitives::{B256, U256},
 };
 use clap::{Parser, Subcommand};
-use eyre::{eyre, Context, Result};
+use eyre::{eyre, Result};
 use ollama_workflows::Model;
 use reqwest::Url;
 
@@ -89,6 +89,7 @@ struct Cli {
     secret_key: B256,
 }
 
+/// Main CLI entry point.
 pub async fn cli() -> Result<()> {
     // default commands such as version and help exit at this point,
     // so we can do the node setup after this line
@@ -101,7 +102,7 @@ pub async fn cli() -> Result<()> {
     let config = DriaOracleConfig::new(&secret_key, rpc_url)?;
     let node = DriaOracle::new(config).await?;
     log::info!("{}", node);
-    log::info!("{}", node.contract_addresses);
+    log::info!("{}", node.addresses);
 
     match cli.command {
         Commands::Balance => commands::display_balance(&node).await?,

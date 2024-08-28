@@ -3,7 +3,10 @@ use crate::{
     contracts::{bytes_to_string, OracleKind, TaskStatus},
     DriaOracle,
 };
-use alloy::{eips::BlockNumberOrTag, primitives::U256};
+use alloy::{
+    eips::BlockNumberOrTag,
+    primitives::{Bytes, U256},
+};
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 use ollama_workflows::Model;
@@ -37,7 +40,7 @@ pub async fn run_oracle(
             from_block.clone().into()
         );
         let prev_tasks = node
-            .get_tasks(from_block.clone(), BlockNumberOrTag::Latest)
+            .get_tasks_in_range(from_block.clone(), BlockNumberOrTag::Latest)
             .await?;
         for (event, log) in prev_tasks {
             let task_id = event.taskId;
@@ -75,7 +78,7 @@ pub async fn run_oracle(
         .wrap_err("Could not subscribe")?;
     log::info!(
         "Subscribed to LLMOracleCoordinator ({}) as {}",
-        node.contract_addresses.coordinator,
+        node.addresses.coordinator,
         kinds
             .iter()
             .map(|kind| kind.to_string())
@@ -127,7 +130,7 @@ pub async fn view_task_events(
         to_block.clone().into()
     );
 
-    let task_events = node.get_tasks(from_block, to_block).await?;
+    let task_events = node.get_tasks_in_range(from_block, to_block).await?;
 
     for (event, _) in task_events {
         log::info!(
@@ -174,6 +177,54 @@ pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
             log::info!("Validator:  {}", validation.validator);
         }
     }
+
+    Ok(())
+}
+
+pub async fn request_task(
+    node: &DriaOracle,
+    input: Bytes,
+    models: Bytes,
+    difficulty: u8,
+    num_gens: u64,
+    num_vals: u64,
+) -> Result<()> {
+    log::info!("Requesting a new task.");
+
+    // request total fee
+    let total_fee = node
+        .get_request_fee(difficulty, num_gens, num_vals)
+        .await?
+        .totalFee;
+
+    // check balance
+    let balance = node.get_token_balance(node.address()).await?.amount;
+    if balance < total_fee {
+        return Err(eyre!("Insufficient balance. Please fund your wallet."));
+    }
+
+    // check current allowance
+    let allowance = node
+        .allowance(node.address(), node.addresses.coordinator)
+        .await?
+        .amount;
+
+    // make sure we have enough allowance
+    if allowance < total_fee {
+        log::info!("Insufficient allowance. Approving the fee amount.");
+        node.approve(node.addresses.coordinator, total_fee).await?;
+        log::info!("Token approval successful.");
+    }
+
+    // make the request
+    let receipt = node
+        .request(input, models, difficulty, num_gens, num_vals)
+        .await?;
+
+    log::info!(
+        "Task requested successfully. tx: {}",
+        receipt.transaction_hash
+    );
 
     Ok(())
 }

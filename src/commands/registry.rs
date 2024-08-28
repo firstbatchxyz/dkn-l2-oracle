@@ -11,7 +11,7 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
         // calculate the required approval for registration
         let stake = node.registry_stake_amount(kind).await?;
         let allowance = node
-            .allowance(node.address(), node.contract_addresses.registry)
+            .allowance(node.address(), node.addresses.registry)
             .await?;
 
         // approve if necessary
@@ -34,7 +34,7 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
             }
 
             // approve the difference
-            node.approve(node.contract_addresses.registry, difference)
+            node.approve(node.addresses.registry, difference)
                 .await?;
         } else {
             log::info!("Already approved enough tokens.");
@@ -58,14 +58,14 @@ pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
 
         // transfer all allowance from registry back to oracle
         let allowance = node
-            .allowance(node.contract_addresses.registry, node.address())
+            .allowance(node.addresses.registry, node.address())
             .await?;
         log::info!(
             "Transferring all allowance ({}) back from registry.",
             allowance
         );
         node.transfer_from(
-            node.contract_addresses.registry,
+            node.addresses.registry,
             node.address(),
             allowance.amount,
         )

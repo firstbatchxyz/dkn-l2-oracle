@@ -17,7 +17,7 @@ pub async fn display_balance(node: &DriaOracle) -> Result<()> {
 /// Show the amount of claimable rewards
 pub async fn display_rewards(node: &DriaOracle) -> Result<()> {
     let allowance = node
-        .allowance(node.contract_addresses.coordinator, node.address())
+        .allowance(node.addresses.coordinator, node.address())
         .await?;
 
     log::info!("Claimable rewards:");
@@ -34,7 +34,7 @@ pub async fn display_rewards(node: &DriaOracle) -> Result<()> {
 pub async fn claim_rewards(node: &DriaOracle) -> Result<()> {
     // get allowance
     let allowance = node
-        .allowance(node.contract_addresses.coordinator, node.address())
+        .allowance(node.addresses.coordinator, node.address())
         .await?;
 
     // check if there are rewards to claim
@@ -43,7 +43,7 @@ pub async fn claim_rewards(node: &DriaOracle) -> Result<()> {
     } else {
         // transfer rewards
         node.transfer_from(
-            node.contract_addresses.coordinator,
+            node.addresses.coordinator,
             node.address(),
             allowance.amount,
         )
