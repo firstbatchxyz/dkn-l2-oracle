@@ -1,8 +1,13 @@
-use crate::{commands, contracts::OracleKind, DriaOracle};
-use alloy::{eips::BlockNumberOrTag, primitives::U256};
+use crate::{commands, contracts::OracleKind, DriaOracle, DriaOracleConfig};
+use alloy::{
+    eips::BlockNumberOrTag,
+    hex::FromHex,
+    primitives::{B256, U256},
+};
 use clap::{Parser, Subcommand};
-use eyre::{eyre, Result};
+use eyre::{eyre, Context, Result};
 use ollama_workflows::Model;
+use reqwest::Url;
 
 /// `value_parser` to parse a `str` to `OracleKind`.
 fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
@@ -12,6 +17,16 @@ fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
 /// `value_parser` to parse a `str` to `OracleKind`.
 fn parse_model(value: &str) -> Result<Model> {
     Model::try_from(value.to_string()).map_err(|e| eyre!(e))
+}
+
+/// `value_parser` to parse a `str` to `Url`.
+fn parse_url(value: &str) -> Result<Url> {
+    Url::parse(value).map_err(Into::into)
+}
+
+/// `value_parser` to parse a hexadecimal `str` to 256-bit type `B256`.
+fn parse_secret_key(value: &str) -> Result<B256> {
+    B256::from_hex(value).map_err(Into::into)
 }
 
 // https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes
@@ -65,16 +80,30 @@ struct Cli {
     #[command(subcommand)]
     command: Commands,
 
-    #[arg(short, long, env = "RPC_URL")]
-    rpc_url: String,
+    /// RPC URL of the Ethereum node.
+    #[arg(short, long, env = "RPC_URL", value_parser = parse_url)]
+    rpc_url: Url,
+
+    /// Ethereum wallet's secret (private) key.
+    #[arg(short, long, env = "SECRET_KEY", value_parser = parse_secret_key)]
+    secret_key: B256,
 }
 
-pub async fn cli(node: DriaOracle) -> Result<()> {
-    let matched_commands = Cli::parse().command;
+pub async fn cli() -> Result<()> {
+    // default commands such as version and help exit at this point,
+    // so we can do the node setup after this line
+    let cli = Cli::parse();
 
-    // TODO: parse params and create node here
+    let rpc_url = cli.rpc_url;
+    let secret_key = cli.secret_key;
 
-    match matched_commands {
+    // create node
+    let config = DriaOracleConfig::new(&secret_key, rpc_url)?;
+    let node = DriaOracle::new(config).await?;
+    log::info!("{}", node);
+    log::info!("{}", node.contract_addresses);
+
+    match cli.command {
         Commands::Balance => commands::display_balance(&node).await?,
         Commands::Register { kinds } => {
             for kind in kinds {

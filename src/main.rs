@@ -1,17 +1,8 @@
-use dkn_oracle::{DriaOracle, DriaOracleConfig};
-
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
-    // create node
-    let config = DriaOracleConfig::new_from_env()?
-        .enable_logs()
-        .enable_color_eyre()?;
-    let node = DriaOracle::new(config).await?;
-    log::info!("{}", node);
-    log::info!("{}", node.contract_addresses);
-
-    // launch CLI
-    dkn_oracle::cli(node).await?;
-
+    dotenvy::dotenv()?;
+    env_logger::try_init()?;
+    color_eyre::install()?;
+    dkn_oracle::cli().await?;
     Ok(())
 }

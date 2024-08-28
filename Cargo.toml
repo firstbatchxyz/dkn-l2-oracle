@@ -29,7 +29,7 @@ ollama-workflows = { git = "https://github.com/andthattoo/ollama-workflows", rev
 ollama-rs = "0.2.0"
 
 # errors & logging
-color-eyre = "0.6.3"
+color-eyre = { version = "0.6.3", default-features = false }
 env_logger = "0.11.5"
 eyre = "0.6.12"
 log = "0.4.22"
@@ -47,10 +47,6 @@ async-trait = "0.1.81"
 bytes = "1.7.1"
 rand = "0.8.5"
 
-[[example]]
-name = "balance"
-path = 'example/balance.rs'
-
-[[example]]
-name = "block"
-path = 'example/block.rs'
+[[bin]]
+name = "request"
+path = 'bin/request.rs'

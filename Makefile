@@ -7,7 +7,7 @@ endif
 ###############################################################################
 .PHONY: launch #       | Run with INFO logging & release mode
 launch:
-		RUST_LOG=info cargo run start --release
+		RUST_LOG=info cargo run --release start 
 		
 .PHONY: run #          | Run with INFO logging
 run:

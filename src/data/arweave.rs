@@ -30,7 +30,7 @@ impl Arweave {
 
 impl Default for Arweave {
     fn default() -> Self {
-        Self::new(DEFAULT_BASE_URL).expect("Default URL should be parsed")
+        Self::new(DEFAULT_BASE_URL).unwrap()
     }
 }
 
