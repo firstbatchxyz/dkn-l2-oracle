@@ -49,7 +49,7 @@ version:
 
 .PHONY: test #         | Run tests
 test:
-		cargo test --all-features
+		RUST_LOG=none,dkn_oracle=info cargo test --all-features
 
 ###############################################################################
 # abi source can be given from outside, and defaults as shown here

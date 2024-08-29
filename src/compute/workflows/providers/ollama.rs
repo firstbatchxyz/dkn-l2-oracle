@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use eyre::{eyre, Context, Result};
 use ollama_rs::Ollama;
 use ollama_workflows::Model;
+use std::env;
 
 use super::ProvidersExt;
 
@@ -46,9 +47,9 @@ impl OllamaConfig {
     ///
     /// If not found, defaults to `DEFAULT_OLLAMA_HOST` and `DEFAULT_OLLAMA_PORT`.
     pub fn new(external_models: Vec<Model>) -> Self {
-        let host = std::env::var("OLLAMA_HOST").unwrap_or(DEFAULT_OLLAMA_HOST.to_string());
-        let port = std::env::var("OLLAMA_PORT")
-            .and_then(|port_str| port_str.parse().map_err(|_| std::env::VarError::NotPresent))
+        let host = env::var("OLLAMA_HOST").unwrap_or(DEFAULT_OLLAMA_HOST.to_string());
+        let port = env::var("OLLAMA_PORT")
+            .and_then(|port_str| port_str.parse().map_err(|_| env::VarError::NotPresent))
             .unwrap_or(DEFAULT_OLLAMA_PORT);
 
         // Ollama workflows may require specific models to be loaded regardless of the choices
@@ -57,7 +58,7 @@ impl OllamaConfig {
             .map(|s| s.to_string())
             .collect();
 
-        let auto_pull = std::env::var("OLLAMA_AUTO_PULL").unwrap_or_default() == *"true";
+        let auto_pull = env::var("OLLAMA_AUTO_PULL").unwrap_or_default() == *"true";
 
         OllamaConfig {
             host,

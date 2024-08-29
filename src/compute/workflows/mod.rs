@@ -30,8 +30,6 @@ pub fn split_comma_separated(input: Option<&str>) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use std::env;
-
     use super::*;
     use alloy::primitives::Bytes;
     use ollama_workflows::{Entry, Executor, Model, ProgramMemory};
@@ -40,8 +38,6 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
-        env::set_var("RUST_LOG", "debug");
-        env_logger::try_init().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
             .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
@@ -57,8 +53,6 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
-        env::set_var("RUST_LOG", "debug");
-        env_logger::try_init().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
             .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
@@ -74,8 +68,6 @@ mod tests {
     #[tokio::test]
     async fn test_workflow_plain() {
         dotenvy::dotenv().unwrap();
-        env::set_var("RUST_LOG", "debug");
-        env_logger::try_init().unwrap();
         let executor = Executor::new(Model::GPT4o);
         let mut memory = ProgramMemory::new();
         let workflow = executor.get_generation_workflow().unwrap();

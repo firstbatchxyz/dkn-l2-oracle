@@ -62,6 +62,27 @@ enum Commands {
         #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser=parse_model)]
         models: Vec<Model>,
     },
+    /// Request a task.
+    Request {
+        #[arg(help = "The input to request a task with.", required = true)]
+        input: String,
+        #[arg(help = "The models to accept.", required = true, value_parser=parse_model)]
+        models: Vec<Model>,
+        #[arg(long, help = "The difficulty of the task.", default_value_t = 1)]
+        difficulty: u8,
+        #[arg(
+            long,
+            help = "The number of generations to request.",
+            default_value_t = 1
+        )]
+        num_gens: u64,
+        #[arg(
+            long,
+            help = "The number of validations to request.",
+            default_value_t = 1
+        )]
+        num_vals: u64,
+    },
     /// View status of a given task.
     View { task_id: U256 },
     /// View tasks between specific blocks.
@@ -141,6 +162,13 @@ pub async fn cli() -> Result<()> {
             )
             .await?
         }
+        Commands::Request {
+            input,
+            models,
+            difficulty,
+            num_gens,
+            num_vals,
+        } => commands::request_task(&node, &input, models, difficulty, num_gens, num_vals).await?,
     };
 
     Ok(())

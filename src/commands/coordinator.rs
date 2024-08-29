@@ -1,11 +1,11 @@
 use crate::{
     compute::{handle_request, ModelConfig},
-    contracts::{bytes_to_string, OracleKind, TaskStatus},
+    contracts::{bytes_to_string, string_to_bytes, OracleKind, TaskStatus},
     DriaOracle,
 };
 use alloy::{
     eips::BlockNumberOrTag,
-    primitives::{Bytes, U256},
+    primitives::{utils::format_ether, U256},
 };
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
@@ -183,15 +183,22 @@ pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
 
 pub async fn request_task(
     node: &DriaOracle,
-    input: Bytes,
-    models: Bytes,
+    input: &str,
+    models: Vec<Model>,
     difficulty: u8,
     num_gens: u64,
     num_vals: u64,
 ) -> Result<()> {
+    let input = string_to_bytes(input.to_string());
+    let models_str = models
+        .iter()
+        .map(|m| m.to_string())
+        .collect::<Vec<String>>()
+        .join(",");
+    let models = string_to_bytes(models_str);
     log::info!("Requesting a new task.");
 
-    // request total fee
+    // get total fee for the request
     let total_fee = node
         .get_request_fee(difficulty, num_gens, num_vals)
         .await?
@@ -211,8 +218,14 @@ pub async fn request_task(
 
     // make sure we have enough allowance
     if allowance < total_fee {
-        log::info!("Insufficient allowance. Approving the fee amount.");
-        node.approve(node.addresses.coordinator, total_fee).await?;
+        let approval_amount = total_fee - allowance;
+        log::info!(
+            "Insufficient allowance. Approving the required amount: {}.",
+            format_ether(approval_amount)
+        );
+
+        node.approve(node.addresses.coordinator, approval_amount)
+            .await?;
         log::info!("Token approval successful.");
     }
 
@@ -220,7 +233,6 @@ pub async fn request_task(
     let receipt = node
         .request(input, models, difficulty, num_gens, num_vals)
         .await?;
-
     log::info!(
         "Task requested successfully. tx: {}",
         receipt.transaction_hash

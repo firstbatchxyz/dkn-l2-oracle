@@ -142,3 +142,21 @@ impl std::fmt::Display for OracleKind {
 pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
     String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
 }
+
+/// Small utility to convert string to bytes.
+pub fn string_to_bytes(input: String) -> Bytes {
+    input.into()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_string_to_bytes() {
+        let input = "hello".to_string();
+        let bytes = string_to_bytes(input.clone());
+        let string = bytes_to_string(&bytes).unwrap();
+        assert_eq!(input, string);
+    }
+}

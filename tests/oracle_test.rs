@@ -1,21 +1,17 @@
-use alloy::{
-    eips::BlockNumberOrTag,
-    primitives::{utils::parse_ether, Bytes},
-};
+use alloy::{eips::BlockNumberOrTag, primitives::utils::parse_ether};
 use dkn_oracle::{
-    bytes_to_string, commands, handle_request, DriaOracle, DriaOracleConfig, ModelConfig,
-    OracleKind, TaskStatus, WETH,
+    bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
+    ModelConfig, OracleKind, TaskStatus, WETH,
 };
 use eyre::Result;
 use ollama_workflows::Model;
 
 #[tokio::test]
-// #[ignore = "run manually"]
-async fn test_oracle_request() -> Result<()> {
+async fn test_oracle() -> Result<()> {
     // task setup
     let difficulty = 1;
-    let models = Bytes::from_static(b"gpt-3.5-turbo");
-    let input = Bytes::from_static(b"What is the result of 2 + 2?");
+    let models = string_to_bytes("gpt-3.5-turbo".to_string());
+    let input = string_to_bytes("What is the result of 2 + 2?".to_string());
     println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
@@ -104,8 +100,9 @@ async fn test_oracle_request() -> Result<()> {
     let responses = node.get_task_responses(task_id).await?;
     assert_eq!(responses.len(), 1);
     let response = responses.into_iter().next().unwrap();
-    println!("Output: {}", bytes_to_string(&response.output)?);
-    println!("Score: {}", response.score);
+    let output_string = bytes_to_string(&response.output)?;
+    assert!(output_string.contains("4"), "output must contain 4");
+    assert!(!response.score.is_zero(), "score must be non-zero");
 
     Ok(())
 }

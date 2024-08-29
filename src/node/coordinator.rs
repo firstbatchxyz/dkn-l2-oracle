@@ -147,6 +147,14 @@ impl DriaOracle {
         Ok((request, responses, validations))
     }
 
+    /// Returns the next task id.
+    pub async fn get_next_task_id(&self) -> Result<U256> {
+        let coordinator = OracleCoordinator::new(self.addresses.coordinator, &self.provider);
+
+        let task_id = coordinator.nextTaskId().call().await?;
+        Ok(task_id._0)
+    }
+
     /// Get fee details for a given request setting.
     pub async fn get_request_fee(
         &self,
