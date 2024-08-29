@@ -34,8 +34,7 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
             }
 
             // approve the difference
-            node.approve(node.addresses.registry, difference)
-                .await?;
+            node.approve(node.addresses.registry, difference).await?;
         } else {
             log::info!("Already approved enough tokens.");
         }
@@ -64,12 +63,8 @@ pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
             "Transferring all allowance ({}) back from registry.",
             allowance
         );
-        node.transfer_from(
-            node.addresses.registry,
-            node.address(),
-            allowance.amount,
-        )
-        .await?;
+        node.transfer_from(node.addresses.registry, node.address(), allowance.amount)
+            .await?;
     }
     Ok(())
 }

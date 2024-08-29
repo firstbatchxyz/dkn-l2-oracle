@@ -4,21 +4,52 @@
 
 <p align="center">
   <h1 align="center">
-    DKN L2 Oracle
+    Dria Oracle Node
   </h1>
   <p align="center">
-    <i>A DKN L2 oracle node to serve LLM requests from smart-contracts.</i>
+    <i>Dria Oracle Node serves LLM workflow tasks directly from smart-contracts.</i>
   </p>
 </p>
 
+## Installation
+
+Install Dria Oracle Node with:
+
+```sh
+# TODO: cargo install commands here
+```
+
 ## Usage
 
-DKN L2 Oracle is a CLI tool.
+TODO: !!!
 
-TODO: clone, install release, prepare env, run help
+## Development
 
-### Models
+### Testing
 
-## Testing
+Run tests with:
 
-Some tests respect the provided configuration (i.e. wallet & RPC URL) and it launches an Anvil node with the respective blockchain state forked. Tests take place over that node.
+```sh
+make test
+```
+
+### Documentation
+
+You can view the inline documentation with:
+
+```sh
+make docs
+```
+
+### Styling
+
+Lint and format with:
+
+```sh
+make lint   # clippy
+make format # rustfmt
+```
+
+## License
+
+This project is licensed under the [Apache License 2.0](https://opensource.org/license/Apache-2.0).

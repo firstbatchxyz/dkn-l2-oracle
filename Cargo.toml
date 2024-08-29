@@ -21,7 +21,7 @@ tokio = { version = "1.39.2", features = [
 lazy_static = "1.5.0"
 
 # compute & workflows
-ollama-workflows = { git = "https://github.com/andthattoo/ollama-workflows", rev = "274b26e" }
+ollama-workflows = { git = "https://github.com/andthattoo/ollama-workflows", rev = "d6b2e1e" }
 ollama-rs = "0.2.0"
 
 # errors & logging

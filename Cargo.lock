@@ -2430,6 +2430,7 @@ dependencies = [
  "tokio 1.39.2",
  "tokio-rustls",
  "tower-service",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -3151,7 +3152,7 @@ dependencies = [
 [[package]]
 name = "ollama-rs"
 version = "0.2.0"
-source = "git+https://github.com/andthattoo/ollama-rs?branch=master#dcdfc07a0974f414b3a86c9aed17d43f1bba7bd1"
+source = "git+https://github.com/andthattoo/ollama-rs?rev=e566515#e56651586c468546a46a995e3176539396d85243"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -3168,7 +3169,7 @@ dependencies = [
 [[package]]
 name = "ollama-workflows"
 version = "0.1.0"
-source = "git+https://github.com/andthattoo/ollama-workflows?rev=274b26e#274b26e4fe39770d8211cc4da96182f59a84dd05"
+source = "git+https://github.com/andthattoo/ollama-workflows?rev=d6b2e1e#d6b2e1e0259958bd4abe301f5c6c79b7c07b1dc2"
 dependencies = [
  "async-trait",
  "colored",
@@ -3177,7 +3178,7 @@ dependencies = [
  "html2text",
  "langchain-rust",
  "log",
- "ollama-rs 0.2.0 (git+https://github.com/andthattoo/ollama-rs?branch=master)",
+ "ollama-rs 0.2.0 (git+https://github.com/andthattoo/ollama-rs?rev=e566515)",
  "openai_dive",
  "parking_lot",
  "rand 0.8.5",
@@ -4034,6 +4035,7 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
+ "webpki-roots",
  "winreg 0.52.0",
 ]
 
