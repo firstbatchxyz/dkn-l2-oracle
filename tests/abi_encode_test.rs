@@ -9,7 +9,6 @@ use alloy::{
 };
 use eyre::Result;
 
-// Codegen from embedded Solidity code and precompiled bytecode.
 sol! {
     #[allow(missing_docs)]
     // solc v0.8.26; solc tests/contracts/TestSolidityPacked.sol --via-ir --optimize --bin

@@ -5,7 +5,6 @@ use alloy::{
 use dkn_oracle::{mine_nonce, DriaOracle, DriaOracleConfig};
 use eyre::Result;
 
-// Codegen from embedded Solidity code and precompiled bytecode.
 sol! {
     #[allow(missing_docs)]
     // solc v0.8.26; solc tests/contracts/TestNonce.sol --via-ir --optimize --bin
@@ -51,7 +50,6 @@ async fn test_nonce_contract() -> Result<()> {
     // println!("Target:    {:x}", contract_bytes.target);
     // println!("Candidate: {:x}", contract_bytes.candidate);
     // println!("Message:\n{:x}", contract_bytes.message);
-
     assert_eq!(contract_bytes.target, target);
     assert_eq!(U256::from_be_bytes(contract_bytes.candidate.0), candidate);
     assert_eq!(contract_bytes.result, true);

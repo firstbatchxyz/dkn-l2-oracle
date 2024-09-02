@@ -1,12 +1,13 @@
+//! Using the forked blockchain, creates two accounts (alice, bob) and then,
+//!
+//! 1. Alice buys WETH
+//! 2. Alice approves Bob
+//! 3. Bob transfers WETH from Alice
+
 use alloy::primitives::utils::parse_ether;
 use dkn_oracle::{DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;
 
-/// Using the forked blockchain, creates two accounts (alice, bob) and then,
-///
-/// 1. Alice buys WETH
-/// 2. Alice approves Bob
-/// 3. Bob transfers WETH from Alice
 #[tokio::test]
 async fn test_weth_transfer() -> Result<()> {
     // amount of WETH that will be transferred

@@ -1,3 +1,7 @@
+//! Tests the request command, resulting in a task being created in the coordinator contract.
+//!
+//! 1. Requester buys some WETH, and it is approved within the request command.
+
 use alloy::primitives::utils::parse_ether;
 use dkn_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;

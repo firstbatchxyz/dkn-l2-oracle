@@ -5,14 +5,9 @@ use alloy::{
     primitives::{B256, U256},
 };
 use clap::{Parser, Subcommand};
-use eyre::{eyre, Result};
+use eyre::{eyre, Context, Result};
 use ollama_workflows::Model;
 use reqwest::Url;
-
-/// `value_parser` to parse a `str` to `OracleKind`.
-fn parse_oracle_kind(value: &str) -> Result<OracleKind> {
-    OracleKind::try_from(value)
-}
 
 /// `value_parser` to parse a `str` to `OracleKind`.
 fn parse_model(value: &str) -> Result<Model> {
@@ -32,24 +27,24 @@ fn parse_secret_key(value: &str) -> Result<B256> {
 // https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes
 #[derive(Subcommand)]
 enum Commands {
-    /// See the current balance of the oracle node.
-    Balance,
     /// Register oracle as a specific oracle kind.
     Register {
-        #[arg(help = "The oracle kinds to register as.", required = true, value_parser=parse_oracle_kind)]
+        #[arg(help = "The oracle kinds to register as.", required = true)]
         kinds: Vec<OracleKind>,
     },
     /// Unregister oracle as a specific oracle kind.
     Unregister {
-        #[arg(help = "The oracle kinds to unregister as.", required = true, value_parser=parse_oracle_kind)]
+        #[arg(help = "The oracle kinds to unregister as.", required = true)]
         kinds: Vec<OracleKind>,
     },
     /// See all registrations.
     Registrations,
-    /// Claim rewards from the coordinator.
-    Claim,
+    /// See the current balance of the oracle node.
+    Balance,
     /// See claimable rewards from the coordinator.
     Rewards,
+    /// Claim rewards from the coordinator.
+    Claim,
     /// Start the oracle node.
     Start {
         #[arg(
@@ -57,7 +52,7 @@ enum Commands {
             help = "Starting block number to listen for, defaults to 'latest'."
         )]
         from: Option<BlockNumberOrTag>,
-        #[arg(help = "The oracle kinds to handle tasks as.", required = true, value_parser=parse_oracle_kind)]
+        #[arg(help = "The oracle kinds to handle tasks as.", required = false)]
         kinds: Vec<OracleKind>,
         #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser=parse_model)]
         models: Vec<Model>,
@@ -120,8 +115,11 @@ pub async fn cli() -> Result<()> {
     let secret_key = cli.secret_key;
 
     // create node
-    let config = DriaOracleConfig::new(&secret_key, rpc_url)?;
-    let node = DriaOracle::new(config).await?;
+    let config =
+        DriaOracleConfig::new(&secret_key, rpc_url).wrap_err("Could not create oracle config.")?;
+    let node = DriaOracle::new(config)
+        .await
+        .wrap_err("Could not create oracle node.")?;
     log::info!("{}", node);
     log::info!("{}", node.addresses);
 

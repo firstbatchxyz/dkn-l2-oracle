@@ -1,4 +1,5 @@
 use alloy::{primitives::Bytes, sol};
+use clap::ValueEnum;
 use eyre::{Context, Result};
 
 use self::OracleCoordinator::StatusUpdate;
@@ -85,7 +86,7 @@ impl std::fmt::Display for StatusUpdate {
 }
 
 /// `OracleKind` as it appears within the registry.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, ValueEnum)]
 pub enum OracleKind {
     Generator,
     Validator,
@@ -104,26 +105,6 @@ impl TryFrom<u8> for OracleKind {
         match value {
             0 => Ok(OracleKind::Generator),
             1 => Ok(OracleKind::Validator),
-            _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),
-        }
-    }
-}
-
-impl TryFrom<String> for OracleKind {
-    type Error = eyre::Error;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        Self::try_from(value.as_str())
-    }
-}
-
-impl TryFrom<&str> for OracleKind {
-    type Error = eyre::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "g" | "gen" | "generator" => Ok(OracleKind::Generator),
-            "v" | "val" | "validator" => Ok(OracleKind::Validator),
             _ => Err(eyre::eyre!("Invalid OracleKind: {}", value)),
         }
     }

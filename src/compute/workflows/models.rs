@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use super::{split_comma_separated, OllamaConfig, OpenAIConfig, ProvidersExt};
+use super::{OllamaConfig, OpenAIConfig, ProvidersExt};
 use eyre::{eyre, Result};
 use ollama_workflows::{Model, ModelProvider};
 use rand::seq::IteratorRandom; // provides Vec<_>.choose
@@ -202,6 +202,26 @@ impl ModelConfig {
         }
 
         Ok(())
+    }
+}
+
+/// Utility to parse comma-separated string values, mostly read from the environment.
+/// - Trims `"` from both ends at the start
+/// - For each item, trims whitespace from both ends
+fn split_comma_separated(input: Option<&str>) -> Vec<String> {
+    match input {
+        Some(s) => s
+            .trim_matches('"')
+            .split(',')
+            .filter_map(|s| {
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s.trim().to_string())
+                }
+            })
+            .collect::<Vec<_>>(),
+        None => vec![],
     }
 }
 

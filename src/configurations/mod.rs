@@ -7,6 +7,9 @@ use color_eyre::Section;
 use eyre::{Context, Result};
 use std::env;
 
+/// Configuration for the Dria Oracle.
+///
+/// Stores the `EthereumWallet` instance along with the used RPC url.
 #[derive(Debug, Clone)]
 pub struct DriaOracleConfig {
     pub wallet: EthereumWallet,

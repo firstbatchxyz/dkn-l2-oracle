@@ -11,18 +11,26 @@ use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 use ollama_workflows::Model;
 
-// TODO: add cancellation here
 /// Runs the main loop of the oracle node.
 pub async fn run_oracle(
     node: &DriaOracle,
-    kinds: Vec<OracleKind>,
+    mut kinds: Vec<OracleKind>,
     models: Vec<Model>,
     from_block: impl Into<BlockNumberOrTag> + Clone,
 ) -> Result<()> {
-    // make sure we are registered to required kinds
-    for kind in &kinds {
-        if !node.is_registered(*kind).await? {
-            return Err(eyre!("You need to register as {} first.", kind))?;
+    // if kinds are not provided, use the registrations as kinds
+    if kinds.is_empty() {
+        for kind in [OracleKind::Generator, OracleKind::Validator] {
+            if node.is_registered(kind).await? {
+                kinds.push(kind);
+            }
+        }
+    } else {
+        // otherwise, make sure we are registered to required kinds
+        for kind in &kinds {
+            if !node.is_registered(*kind).await? {
+                return Err(eyre!("You need to register as {} first.", kind))?;
+            }
         }
     }
 
@@ -148,21 +156,26 @@ pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
     log::info!("Viewing task {}.", task_id);
     let (request, responses, validations) = node.get_task(task_id).await?;
 
-    log::info!("Request Information:");
-    log::info!("Requester: {}", request.requester);
-    log::info!("Status:    {}", TaskStatus::try_from(request.status)?);
-    log::info!("Input:     {}", bytes_to_string(&request.input)?);
-    log::info!("Models:    {}", bytes_to_string(&request.models)?);
+    log::info!(
+        "Request Information:\nRequester: {}\nStatus:    {}\nInput:     {}\nModels:    {}",
+        request.requester,
+        TaskStatus::try_from(request.status)?,
+        bytes_to_string(&request.input)?,
+        bytes_to_string(&request.models)?
+    );
 
     log::info!("Responses:");
     if responses._0.is_empty() {
         log::warn!("There are no responses yet.");
     } else {
         for (idx, response) in responses._0.iter().enumerate() {
-            log::info!("Response  #{}", idx);
-            log::info!("Output:    {}", bytes_to_string(&response.output)?);
-            log::info!("Metadata:  {}", bytes_to_string(&response.metadata)?);
-            log::info!("Generator: {}", response.responder);
+            log::info!(
+                "Response  #{}\nOutput:    {}\nMetadata:  {}\nGenerator: {}",
+                idx,
+                bytes_to_string(&response.output)?,
+                bytes_to_string(&response.metadata)?,
+                response.responder
+            );
         }
     }
 
@@ -171,10 +184,13 @@ pub async fn view_task(node: &DriaOracle, task_id: U256) -> Result<()> {
         log::warn!("There are no validations yet.");
     } else {
         for (idx, validation) in validations._0.iter().enumerate() {
-            log::info!("Validation #{}", idx);
-            log::info!("Scores:     {:?}", validation.scores);
-            log::info!("Metadata:   {}", bytes_to_string(&validation.metadata)?);
-            log::info!("Validator:  {}", validation.validator);
+            log::info!(
+                "Validation #{}\nScores:     {:?}\nMetadata:   {}\nValidator:  {}",
+                idx,
+                validation.scores,
+                bytes_to_string(&validation.metadata)?,
+                validation.validator
+            );
         }
     }
 

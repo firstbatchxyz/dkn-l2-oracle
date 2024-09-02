@@ -1,9 +1,8 @@
+use crate::data::{Arweave, OracleExternalData};
 use async_trait::async_trait;
 use bytes::Bytes;
 use eyre::{Context, Result};
 use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
-
-use crate::data::{arweave::Arweave, traits::OracleExternalData};
 
 #[async_trait]
 pub trait WorkflowsExt {

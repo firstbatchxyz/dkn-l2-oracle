@@ -3,7 +3,8 @@ use eyre::Result;
 
 /// A generalized external storage trait.
 ///
-/// For Arweave, `put` corresponds to uploading and `get` corresponds to downloading.
+/// Putting a value should return a unique key, even for the same value uploaded multiple times.
+/// Getting a value should be done with that returned key.
 #[async_trait]
 pub trait OracleExternalData {
     type Key;

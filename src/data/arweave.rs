@@ -5,6 +5,10 @@ use reqwest::{Client, Url};
 
 const DEFAULT_BASE_URL: &str = "https://gateway.irys.xyz";
 
+/// External data storage for Arweave.
+///
+/// - `put` corresponds to uploading
+/// - `get` corresponds to downloading
 pub struct Arweave {
     // keypair_path: PathBuf,
     base_url: Url,
