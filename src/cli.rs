@@ -57,6 +57,15 @@ enum Commands {
         #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser=parse_model)]
         models: Vec<Model>,
     },
+    /// View status of a given task.
+    View { task_id: U256 },
+    /// View tasks between specific blocks.
+    Tasks {
+        #[arg(long, help = "Starting block number, defaults to 'earliest'.")]
+        from: Option<BlockNumberOrTag>,
+        #[arg(long, help = "Ending block number, defaults to 'latest'.")]
+        to: Option<BlockNumberOrTag>,
+    },
     /// Request a task.
     Request {
         #[arg(help = "The input to request a task with.", required = true)]
@@ -77,15 +86,6 @@ enum Commands {
             default_value_t = 1
         )]
         num_vals: u64,
-    },
-    /// View status of a given task.
-    View { task_id: U256 },
-    /// View tasks between specific blocks.
-    Tasks {
-        #[arg(long, help = "Starting block number, defaults to 'earliest'.")]
-        from: Option<BlockNumberOrTag>,
-        #[arg(long, help = "Ending block number, defaults to 'latest'.")]
-        to: Option<BlockNumberOrTag>,
     },
 }
 

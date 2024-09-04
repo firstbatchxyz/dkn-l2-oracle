@@ -27,7 +27,7 @@ dkn-oracle help
 
 ## Setup
 
-TODO: !!!
+TODO: We will use a launcher for this
 
 ## Usage
 
@@ -119,6 +119,12 @@ It mainly takes an input argument, followed by multiple model arguments:
 ```sh
 dkn-oracle request "What is 2+2?" gpt-4o-mini phi3:3.8b
 ```
+
+It also takes the following options:
+
+- `--difficulty` for the proof-of-work difficulty for oracles that are responding to this request; the higher this is the more fees it will take to make the request.
+- `--num-gens` number of generations requested.
+- `--num-vals` number of validations required per request.
 
 > [!NOTE]
 >
