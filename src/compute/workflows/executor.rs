@@ -61,6 +61,7 @@ impl WorkflowsExt for Executor {
     async fn execute_raw(&self, input_bytes: &Bytes) -> Result<(String, String)> {
         let (entry, workflow) = self.prepare_input(input_bytes).await?;
         let mut memory = ProgramMemory::new();
+        // let workflow_name = workflow.get_config()..clone();
         let output = self.execute(entry.as_ref(), workflow, &mut memory).await;
 
         // TODO: metadata shall be returned instead of string default

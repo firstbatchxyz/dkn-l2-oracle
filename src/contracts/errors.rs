@@ -90,6 +90,7 @@ impl From<OracleRegistryErrors> for ErrReport {
             OracleRegistryErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
             }
+            _ => eyre!("Unhandled Oracle registry error"),
         }
     }
 }
@@ -135,6 +136,7 @@ impl From<OracleCoordinatorErrors> for ErrReport {
             OracleCoordinatorErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
             }
+            _ => eyre!("Unhandled Oracle coordinator error"),
         }
     }
 }

@@ -51,6 +51,7 @@ pub async fn run_oracle(
             .get_tasks_in_range(from_block.clone(), BlockNumberOrTag::Latest)
             .await?;
         for (event, log) in prev_tasks {
+            let protocol = event.protocol;
             let task_id = event.taskId;
             log::info!(
                 "Previous task: {} ({} -> {})",

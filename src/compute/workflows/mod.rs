@@ -7,6 +7,8 @@ pub use models::ModelConfig;
 mod providers;
 pub use providers::*;
 
+mod postprocess;
+
 #[cfg(test)]
 mod tests {
     use super::*;
