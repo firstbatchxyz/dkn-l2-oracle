@@ -65,13 +65,11 @@ impl PostProcess for SwanPostProcessor {
 
 #[cfg(test)]
 mod tests {
+    use alloy::primitives::Address;
+
     use super::*;
 
-    #[test]
-    fn test_swan_post_processor() {
-        let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
-
-        let input = r#"
+    const INPUT: &str = r#"
 some blabla here and there
 
 <buy_list>
@@ -84,8 +82,12 @@ some blabla here and there
 some more blabla here
         "#;
 
-        let (output, metadata) = post_processor.post_process(input.to_string()).unwrap();
-        assert_eq!(metadata, input, "metadata must be the same as input");
+    #[test]
+    fn test_swan_post_processor() {
+        let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
+
+        let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
+        assert_eq!(metadata, INPUT, "metadata must be the same as input");
 
         // the output is abi encoded 4 addresses, it has 6 elements:
         // offset | length | addr1 | addr2 | addr3 | addr4
@@ -97,5 +99,8 @@ some more blabla here
             output, expected_output,
             "output must be the same as expected"
         );
+
+        let addresses = <Vec<Address>>::abi_decode(&hex::decode(output).unwrap(), true).unwrap();
+        assert_eq!(addresses.len(), 4, "must have 4 addresses");
     }
 }
