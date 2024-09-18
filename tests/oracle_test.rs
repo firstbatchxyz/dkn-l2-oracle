@@ -10,12 +10,13 @@ use ollama_workflows::Model;
 async fn test_oracle() -> Result<()> {
     // task setup
     let difficulty = 1;
-    let models = string_to_bytes("gpt-3.5-turbo".to_string());
+    let models = string_to_bytes(Model::GPT4Turbo.to_string());
+    let protocol = format!("test/{}", env!("CARGO_PKG_VERSION"));
     let input = string_to_bytes("What is the result of 2 + 2?".to_string());
     println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
-    let model_config = ModelConfig::new(vec![Model::GPT3_5Turbo]);
+    let model_config = ModelConfig::new(vec![Model::GPT4Turbo]);
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::anvil_new(config).await?;
 
@@ -48,7 +49,9 @@ async fn test_oracle() -> Result<()> {
         .await?;
 
     // make a request with just one generation and validation request
-    let request_receipt = requester.request(input, models, difficulty, 1, 1).await?;
+    let request_receipt = requester
+        .request(input, models, difficulty, 1, 1, protocol)
+        .await?;
 
     // handle generation by reading the latest event
     let tasks = node

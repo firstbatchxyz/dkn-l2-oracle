@@ -1,4 +1,7 @@
-use alloy::{primitives::Bytes, sol};
+use alloy::{
+    primitives::{Bytes, FixedBytes},
+    sol,
+};
 use clap::ValueEnum;
 use eyre::{Context, Result};
 
@@ -129,6 +132,31 @@ pub fn string_to_bytes(input: String) -> Bytes {
     input.into()
 }
 
+/// Small utility to convert bytes32 to string.
+/// Simply reads bytes until the first null byte.
+pub fn bytes32_to_string(bytes: &FixedBytes<32>) -> Result<String> {
+    let mut bytes = bytes.to_vec();
+    if let Some(pos) = bytes.iter().position(|&b| b == 0) {
+        bytes.truncate(pos);
+    } else {
+        return Err(eyre::eyre!("Could not find null terminator in bytes32"));
+    }
+    String::from_utf8(bytes).wrap_err("Could not convert bytes to string")
+}
+
+/// Small utility to convert string to bytes32.
+/// Ensures that the string is at most 31 bytes long, and right-bads zeros for the null-terminator.
+pub fn string_to_bytes32(input: String) -> Result<FixedBytes<32>> {
+    let mut bytes = input.into_bytes();
+    if bytes.len() > 31 {
+        return Err(eyre::eyre!("String is too long for bytes32"));
+    }
+
+    // append bytes via resizing
+    bytes.resize(32, 0);
+    Ok(FixedBytes::from_slice(&bytes))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,6 +166,14 @@ mod tests {
         let input = "hello".to_string();
         let bytes = string_to_bytes(input.clone());
         let string = bytes_to_string(&bytes).unwrap();
+        assert_eq!(input, string);
+    }
+
+    #[test]
+    fn test_string_to_bytes32() {
+        let input = "hello".to_string();
+        let bytes32 = string_to_bytes32(input.clone()).unwrap();
+        let string = bytes32_to_string(&bytes32).unwrap();
         assert_eq!(input, string);
     }
 }

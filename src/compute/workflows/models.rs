@@ -235,23 +235,23 @@ mod tests {
         assert_eq!(cfg.models_providers.len(), 0, "should have no models");
 
         let cfg = ModelConfig::new_from_csv(Some(
-            "phi3:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl",
+            "phi3.5:3.8b,phi3:14b-medium-4k-instruct-q4_1,balblablabl",
         ));
         assert_eq!(cfg.models_providers.len(), 2, "should have some models");
     }
 
     #[test]
     fn test_model_matching() {
-        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b"));
+        let cfg = ModelConfig::new_from_csv(Some("gpt-4-turbo,phi3.5:3.8b"));
         assert_eq!(
             cfg.get_matching_model("openai".to_string()).unwrap().1,
-            Model::GPT3_5Turbo,
+            Model::GPT4Turbo,
             "Should find existing model"
         );
 
         assert_eq!(
-            cfg.get_matching_model("phi3:3.8b".to_string()).unwrap().1,
-            Model::Phi3Mini,
+            cfg.get_matching_model("phi3.5:3.8b".to_string()).unwrap().1,
+            Model::Phi3_5Mini,
             "Should find existing model"
         );
 
@@ -269,7 +269,7 @@ mod tests {
 
     #[test]
     fn test_get_any_matching_model() {
-        let cfg = ModelConfig::new_from_csv(Some("gpt-3.5-turbo,phi3:3.8b"));
+        let cfg = ModelConfig::new_from_csv(Some("gpt-4-turbo,phi3.5:3.8b"));
 
         let result = cfg.get_any_matching_model(vec![
             "i-dont-exist".to_string(),
@@ -279,7 +279,7 @@ mod tests {
         ]);
         assert_eq!(
             result.unwrap().1,
-            Model::Phi3Mini,
+            Model::Phi3_5Mini,
             "Should find existing model"
         );
     }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use eyre::{eyre, Context, Result};
-use ollama_rs::Ollama;
+use ollama_workflows::ollama_rs::Ollama;
 use ollama_workflows::Model;
 use std::env;
 

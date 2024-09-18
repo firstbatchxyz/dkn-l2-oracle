@@ -166,7 +166,18 @@ pub async fn cli() -> Result<()> {
             difficulty,
             num_gens,
             num_vals,
-        } => commands::request_task(&node, &input, models, difficulty, num_gens, num_vals).await?,
+        } => {
+            commands::request_task(
+                &node,
+                &input,
+                models,
+                difficulty,
+                num_gens,
+                num_vals,
+                format!("oracle-cli/{}", env!("CARGO_PKG_VERSION")),
+            )
+            .await?
+        }
     };
 
     Ok(())
