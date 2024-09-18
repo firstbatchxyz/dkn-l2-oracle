@@ -7,7 +7,7 @@ pub use models::ModelConfig;
 mod providers;
 pub use providers::*;
 
-mod postprocess;
+pub(self) mod postprocess;
 
 #[cfg(test)]
 mod tests {
@@ -21,7 +21,7 @@ mod tests {
         dotenvy::dotenv().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
-            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
+            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
             .await
             .unwrap();
 
@@ -36,7 +36,7 @@ mod tests {
         dotenvy::dotenv().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
         let (output, _) = executor
-            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"))
+            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
             .await
             .unwrap();
 
@@ -53,7 +53,10 @@ mod tests {
         let mut memory = ProgramMemory::new();
         let workflow = executor.get_generation_workflow().unwrap();
         let input = Entry::try_value_or_str("What is 2 + 2?");
-        let output = executor.execute(Some(&input), workflow, &mut memory).await;
+        let output = executor
+            .execute(Some(&input), workflow, &mut memory)
+            .await
+            .unwrap();
         println!("Output:\n{}", output);
     }
 }

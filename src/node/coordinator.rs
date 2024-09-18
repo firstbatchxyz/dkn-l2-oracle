@@ -1,13 +1,12 @@
 use self::OracleCoordinator::getFeeReturn;
-
 use super::{DriaOracle, DriaOracleProviderTransport};
 use crate::contracts::*;
 use alloy::contract::EventPoller;
 use alloy::eips::BlockNumberOrTag;
-use alloy::primitives::Bytes;
-use alloy::primitives::U256;
+use alloy::primitives::{Bytes, U256};
 use alloy::rpc::types::{Log, TransactionReceipt};
 use eyre::{eyre, Context, Result};
+use OracleCoordinator::LLMOracleTaskParameters;
 use OracleCoordinator::{
     getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
     TaskValidation,
@@ -22,10 +21,16 @@ impl DriaOracle {
         difficulty: u8,
         num_gens: u64,
         num_vals: u64,
+        protocol: String,
     ) -> Result<TransactionReceipt> {
         let coordinator = OracleCoordinator::new(self.addresses.coordinator, &self.provider);
 
-        let req = coordinator.request(input, models, difficulty, num_gens, num_vals);
+        let parameters = LLMOracleTaskParameters {
+            difficulty,
+            numGenerations: num_gens,
+            numValidations: num_vals,
+        };
+        let req = coordinator.request(string_to_bytes32(protocol)?, input, models, parameters);
         let tx = req
             .send()
             .await
@@ -164,11 +169,14 @@ impl DriaOracle {
     ) -> Result<getFeeReturn> {
         let coordinator = OracleCoordinator::new(self.addresses.coordinator, &self.provider);
 
-        let tasks = coordinator
-            .getFee(difficulty, num_gens, num_vals)
-            .call()
-            .await?;
+        let parameters = LLMOracleTaskParameters {
+            difficulty,
+            numGenerations: num_gens,
+            numValidations: num_vals,
+        };
 
-        Ok(tasks)
+        let fees = coordinator.getFee(parameters).call().await?;
+
+        Ok(fees)
     }
 }

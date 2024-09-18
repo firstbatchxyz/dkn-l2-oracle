@@ -1,13 +1,15 @@
-use crate::data::{Arweave, OracleExternalData};
 use async_trait::async_trait;
 use bytes::Bytes;
 use eyre::{Context, Result};
 use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 
+use super::postprocess::*;
+use crate::data::{Arweave, OracleExternalData};
+
 #[async_trait]
 pub trait WorkflowsExt {
     async fn prepare_input(&self, input_bytes: &Bytes) -> Result<(Option<Entry>, Workflow)>;
-    async fn execute_raw(&self, input_bytes: &Bytes) -> Result<(String, String)>;
+    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)>;
 
     /// Returns a generation workflow for the executor.
     #[inline]
@@ -58,13 +60,20 @@ impl WorkflowsExt for Executor {
     /// The workflow & entry is derived from the input.
     ///
     /// Returns output and metadata.
-    async fn execute_raw(&self, input_bytes: &Bytes) -> Result<(String, String)> {
+    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)> {
+        // parse & prepare input
         let (entry, workflow) = self.prepare_input(input_bytes).await?;
-        let mut memory = ProgramMemory::new();
-        // let workflow_name = workflow.get_config()..clone();
-        let output = self.execute(entry.as_ref(), workflow, &mut memory).await;
 
-        // TODO: metadata shall be returned instead of string default
-        Ok((output, String::default()))
+        // obtain raw output
+        let mut memory = ProgramMemory::new();
+        let output = self.execute(entry.as_ref(), workflow, &mut memory).await?;
+
+        // post-process output w.r.t protocol
+        match protocol.split('/').next().unwrap_or_default() {
+            SwanPostProcessor::PROTOCOL => {
+                SwanPostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
+            }
+            _ => IdentityPostProcessor.post_process(output),
+        }
     }
 }

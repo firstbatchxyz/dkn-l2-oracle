@@ -106,8 +106,13 @@ impl From<OracleCoordinatorErrors> for ErrReport {
                 e.given,
                 e.required
             ),
-            OracleCoordinatorErrors::InvalidDifficulty(e) => {
-                eyre!("Invalid difficulty: {}", e.difficulty)
+            OracleCoordinatorErrors::InvalidParameterRange(e) => {
+                eyre!(
+                    "Invalid parameter range: {} <= {}* <= {}",
+                    e.min,
+                    e.have,
+                    e.max
+                )
             }
             OracleCoordinatorErrors::InvalidNonce(e) => {
                 eyre!("Invalid nonce for task: {} (nonce: {})", e.taskId, e.nonce)
@@ -118,12 +123,6 @@ impl From<OracleCoordinatorErrors> for ErrReport {
                 e.have,
                 e.want
             ),
-            OracleCoordinatorErrors::InvalidNumGenerations(e) => {
-                eyre!("Invalid number of generations: {}", e.numGenerations)
-            }
-            OracleCoordinatorErrors::InvalidNumValidations(e) => {
-                eyre!("Invalid number of validations: {}", e.numValidations)
-            }
             OracleCoordinatorErrors::InvalidValidation(e) => {
                 eyre!("Invalid validation for task: {}", e.taskId)
             }

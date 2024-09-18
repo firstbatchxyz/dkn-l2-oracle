@@ -1,10 +1,12 @@
 use super::{ModelConfig, WorkflowsExt};
 use crate::{
-    contracts::{bytes_to_string, OracleCoordinator::StatusUpdate, OracleKind, TaskStatus},
+    contracts::{
+        bytes32_to_string, bytes_to_string, OracleCoordinator::StatusUpdate, OracleKind, TaskStatus,
+    },
     DriaOracle,
 };
 use alloy::{
-    primitives::{utils::parse_ether, Bytes, U256},
+    primitives::{utils::parse_ether, Bytes, FixedBytes, U256},
     rpc::types::TransactionReceipt,
 };
 use eyre::{eyre, Context, Result};
@@ -18,12 +20,12 @@ pub async fn handle_request(
     model_config: &ModelConfig,
     event: StatusUpdate,
 ) -> Result<Option<TransactionReceipt>> {
-    log::debug!("Received event for task {}", event.taskId);
+    log::debug!("Received event for task {} ()", event.taskId);
 
     let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
             if kinds.contains(&OracleKind::Generator) {
-                handle_generation(node, model_config, event.taskId).await?
+                handle_generation(node, model_config, event.taskId, event.protocol).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not generator.",
@@ -60,6 +62,7 @@ async fn handle_generation(
     node: &DriaOracle,
     models: &ModelConfig,
     task_id: U256,
+    protocol: FixedBytes<32>,
 ) -> Result<Option<TransactionReceipt>> {
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address()) {
@@ -76,16 +79,20 @@ async fn handle_generation(
     let models_string = bytes_to_string(&request.models)?;
     let (_, model) = models.get_any_matching_model_from_csv(&models_string)?;
     log::debug!("Using model: {} from {}", model, models_string);
+
     // execute task
+    let protocol_string = bytes32_to_string(&protocol)?;
     let executor = Executor::new(model);
-    let (output_str, metadata_str) = executor.execute_raw(&request.input).await?;
+    let (output_str, metadata_str) = executor
+        .execute_raw(&request.input, &protocol_string)
+        .await?;
     log::debug!("Output: {}", output_str);
     let output = Bytes::from_iter(output_str.as_bytes());
     let metadata = Bytes::from_iter(metadata_str.as_bytes());
 
     // mine nonce
     let nonce = mine_nonce(
-        request.difficulty,
+        request.parameters.difficulty,
         &request.requester,
         &node.address(),
         &request.input,
@@ -125,8 +132,8 @@ async fn handle_validation(
 
     let request = node.get_task_request(task_id).await?;
 
-    // TODO: validate responses
-    let scores = (0..request.numGenerations)
+    // FIXME: will add validation prompt here
+    let scores = (0..request.parameters.numGenerations)
         .map(|_| parse_ether("1.0").unwrap())
         .collect::<Vec<_>>();
 
@@ -134,7 +141,7 @@ async fn handle_validation(
 
     // mine nonce
     let nonce = mine_nonce(
-        request.difficulty,
+        request.parameters.difficulty,
         &request.requester,
         &node.address(),
         &request.input,

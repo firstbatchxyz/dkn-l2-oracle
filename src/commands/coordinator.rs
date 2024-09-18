@@ -51,7 +51,6 @@ pub async fn run_oracle(
             .get_tasks_in_range(from_block.clone(), BlockNumberOrTag::Latest)
             .await?;
         for (event, log) in prev_tasks {
-            let protocol = event.protocol;
             let task_id = event.taskId;
             log::info!(
                 "Previous task: {} ({} -> {})",
@@ -205,6 +204,7 @@ pub async fn request_task(
     difficulty: u8,
     num_gens: u64,
     num_vals: u64,
+    protocol: String,
 ) -> Result<()> {
     let input = string_to_bytes(input.to_string());
     let models_str = models
@@ -248,7 +248,7 @@ pub async fn request_task(
 
     // make the request
     let receipt = node
-        .request(input, models, difficulty, num_gens, num_vals)
+        .request(input, models, difficulty, num_gens, num_vals, protocol)
         .await?;
     log::info!(
         "Task requested successfully. tx: {}",
