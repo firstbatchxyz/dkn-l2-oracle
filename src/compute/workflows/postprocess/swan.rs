@@ -63,4 +63,39 @@ impl PostProcess for SwanPostProcessor {
     }
 }
 
-// TODO: TESTS
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_swan_post_processor() {
+        let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
+
+        let input = r#"
+some blabla here and there
+
+<buy_list>
+0x4200000000000000000000000000000000000001
+0x4200000000000000000000000000000000000002
+0x4200000000000000000000000000000000000003
+0x4200000000000000000000000000000000000004
+</buy_list>
+
+some more blabla here
+        "#;
+
+        let (output, metadata) = post_processor.post_process(input.to_string()).unwrap();
+        assert_eq!(metadata, input, "metadata must be the same as input");
+
+        // the output is abi encoded 4 addresses, it has 6 elements:
+        // offset | length | addr1 | addr2 | addr3 | addr4
+        //
+        // offset: 2, since addr1 starts from that index
+        // length: 4, since there are 4 addresses
+        let expected_output = "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000004200000000000000000000000000000000000001000000000000000000000000420000000000000000000000000000000000000200000000000000000000000042000000000000000000000000000000000000030000000000000000000000004200000000000000000000000000000000000004";
+        assert_eq!(
+            output, expected_output,
+            "output must be the same as expected"
+        );
+    }
+}

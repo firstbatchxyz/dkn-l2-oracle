@@ -14,3 +14,16 @@ impl PostProcess for IdentityPostProcessor {
         Ok((input, String::default()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_identity_post_processor() {
+        let input = "hello".to_string();
+        let (output, metadata) = IdentityPostProcessor.post_process(input).unwrap();
+        assert_eq!(output, "hello");
+        assert_eq!(metadata, "");
+    }
+}

@@ -129,10 +129,6 @@ impl DriaOracle {
             return Err(eyre!("Token contract not deployed."));
         }
 
-        log::debug!("Coordinator codesize: {}", coordinator_size);
-        log::debug!("Registry codesize: {}", registry_size);
-        log::debug!("Token codesize: {}", token_size);
-
         Ok(())
     }
 
