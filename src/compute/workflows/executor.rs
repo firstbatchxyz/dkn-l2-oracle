@@ -6,7 +6,7 @@ use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 use super::postprocess::*;
 use crate::data::{Arweave, OracleExternalData};
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait WorkflowsExt {
     async fn prepare_input(&self, input_bytes: &Bytes) -> Result<(Option<Entry>, Workflow)>;
     async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)>;
@@ -18,7 +18,7 @@ pub trait WorkflowsExt {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl WorkflowsExt for Executor {
     /// Given an input, prepares it for the executer by providing the entry and workflow.
     ///
@@ -37,7 +37,7 @@ impl WorkflowsExt for Executor {
                     .get(input_str)
                     .await
                     .wrap_err("Could not download from Arweave")?;
-                self.prepare_input(&input_bytes).await
+                self.prepare_input(&input_bytes.into()).await
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
                 let entry = Some(Entry::String(input_str));

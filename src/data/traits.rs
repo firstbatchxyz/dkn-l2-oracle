@@ -5,19 +5,18 @@ use eyre::Result;
 ///
 /// Putting a value should return a unique key, even for the same value uploaded multiple times.
 /// Getting a value should be done with that returned key.
-#[async_trait]
-pub trait OracleExternalData {
-    type Key;
-    type Value;
-
+///
+/// Note that the `async_trait` has `?Send` specified, as by default it makes them `Send` but Arweave does not have it.
+#[async_trait(?Send)]
+pub trait OracleExternalData<Key, Value> {
     /// Returns the value (if exists) at the given key.
-    async fn get(&self, key: Self::Key) -> Result<Self::Value>;
+    async fn get(&self, key: Key) -> Result<Value>;
 
     /// Puts the value and returns the generated key.
-    async fn put(&self, value: Self::Value) -> Self::Key;
+    async fn put(&self, value: Value) -> Result<Key>;
 
     /// Checks if the key is valid.
-    fn is_key(key: Self::Key) -> bool;
+    fn is_key(key: Key) -> bool;
 
     /// Describes the implementation.
     fn describe() -> String;
