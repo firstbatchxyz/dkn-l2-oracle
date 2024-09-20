@@ -51,3 +51,4 @@ clap = { version = "4.5.13", features = ["derive", "env"] }
 # there are many unused stuff here, but everything breaks if you use the minimal set
 # because Bundlr SDK is not maintained at all
 bundlr-sdk = { version = "0.5.0" }
+base64 = "0.22.1"

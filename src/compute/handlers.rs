@@ -90,6 +90,8 @@ async fn handle_generation(
     let output = Bytes::from_iter(output_str.as_bytes());
     let metadata = Bytes::from_iter(metadata_str.as_bytes());
 
+    // do the Arweave trick for large inputs
+
     // mine nonce
     let nonce = mine_nonce(
         request.parameters.difficulty,
@@ -136,8 +138,9 @@ async fn handle_validation(
     let scores = (0..request.parameters.numGenerations)
         .map(|_| parse_ether("1.0").unwrap())
         .collect::<Vec<_>>();
-
     let metadata = Bytes::default();
+
+    // FIXME: can add Arweave trick for metadata here
 
     // mine nonce
     let nonce = mine_nonce(
