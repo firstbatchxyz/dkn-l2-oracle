@@ -1,12 +1,12 @@
+use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use bytes::Bytes;
 use eyre::{Context, Result};
 use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 
 use super::postprocess::*;
 use crate::data::{Arweave, OracleExternalData};
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait WorkflowsExt {
     async fn prepare_input(&self, input_bytes: &Bytes) -> Result<(Option<Entry>, Workflow)>;
     async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)>;
@@ -18,7 +18,7 @@ pub trait WorkflowsExt {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl WorkflowsExt for Executor {
     /// Given an input, prepares it for the executer by providing the entry and workflow.
     ///
@@ -37,7 +37,7 @@ impl WorkflowsExt for Executor {
                     .get(input_str)
                     .await
                     .wrap_err("Could not download from Arweave")?;
-                self.prepare_input(&input_bytes).await
+                self.prepare_input(&input_bytes.into()).await
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
                 let entry = Some(Entry::String(input_str));
@@ -75,5 +75,53 @@ impl WorkflowsExt for Executor {
             }
             _ => IdentityPostProcessor.post_process(output),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_parse_input_string() {
+        let executor = Executor::new(Default::default());
+        let input_str = "foobar";
+
+        let (entry, _) = executor
+            .prepare_input(&input_str.as_bytes().into())
+            .await
+            .unwrap();
+        assert_eq!(entry.unwrap(), Entry::String(input_str.into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_input_arweave() {
+        let executor = Executor::new(Default::default());
+
+        // hex for: Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
+        // contains the string: "\"Hello, Arweave!\"" which will be parsed again within
+        let arweave_key = "\"660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0\"";
+        let expected_str = "Hello, Arweave!";
+
+        let (entry, _) = executor
+            .prepare_input(&arweave_key.as_bytes().into())
+            .await
+            .unwrap();
+        assert_eq!(entry.unwrap(), Entry::String(expected_str.into()));
+    }
+
+    #[tokio::test]
+    async fn test_parse_input_workflow() {
+        let executor = Executor::new(Default::default());
+
+        let workflow_str = include_str!("generation.json");
+        let (entry, _) = executor
+            .prepare_input(&workflow_str.as_bytes().into())
+            .await
+            .unwrap();
+
+        // if Workflow was parsed correctly, entry should be None
+        assert!(entry.is_none());
     }
 }
