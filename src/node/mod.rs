@@ -1,8 +1,9 @@
-#[cfg(feature = "anvil")]
-mod anvil;
 mod coordinator;
 mod registry;
 mod token;
+
+#[cfg(feature = "anvil")]
+mod anvil;
 
 use super::DriaOracleConfig;
 use crate::contracts::*;

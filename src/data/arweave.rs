@@ -56,7 +56,7 @@ pub struct Arweave {
     ///
     /// - If the data exceeds this limit, it will be uploaded to Arweave.
     /// - Otherwise, it will be stored as is.
-    pub(crate) byte_limit: usize,
+    byte_limit: usize,
 }
 
 impl Arweave {
@@ -107,6 +107,23 @@ impl Arweave {
     pub fn hex_to_base64(key: &str) -> Result<String> {
         let decoded_key = hex::decode(key)?;
         Ok(BASE64_URL_SAFE_NO_PAD.encode(&decoded_key))
+    }
+
+    /// Puts the value if it is larger than the byte limit.
+    #[inline]
+    pub async fn put_if_large(&self, value: Bytes) -> Result<Bytes> {
+        let value_size = value.len();
+        if value_size > self.byte_limit {
+            log::info!(
+                "Uploading large ({}B > {}B) value to Arweave",
+                value_size,
+                self.byte_limit
+            );
+            let key = self.put(value.clone()).await?;
+            Ok(key.into())
+        } else {
+            Ok(value)
+        }
     }
 }
 
@@ -178,6 +195,7 @@ impl OracleExternalData for Arweave {
         let res = serde_json::from_value::<UploadResponse>(response_body)?;
 
         log::debug!("Uploaded to Arweave: {:#?}", res);
+        log::info!("Uploaded at {}", self.base_url.join(&res.id)?);
 
         // the key is in base64 format, we want to convert that to hexadecimals
         let key = Self::base64_to_hex(&res.id)?;
@@ -203,11 +221,10 @@ mod tests {
     #[ignore = "run manually"]
     async fn test_download_data() -> Result<()> {
         // https://gateway.irys.xyz/Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
-        let key = "AYamTrn2mXXwscwwpjAYEGPcNZxOu5rv5XHVng_sa0g";
+        let key = Arweave::base64_to_hex("Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA")?;
         let arweave = Arweave::default();
 
         let result = arweave.get(key.to_string()).await?;
-        println!("Result: {:?}", String::from_utf8_lossy(&result));
         let val = serde_json::from_slice::<String>(&result)?;
         assert_eq!(val, "Hello, Arweave!");
 
