@@ -47,8 +47,8 @@ lazy_static! {
             BaseSepolia.into(),
             ContractAddresses {
                 token: address!("4200000000000000000000000000000000000006"),
-                registry: address!("Fd68b02fE5329Ce52926F9b2EFF86F2De12A2aDA"),
-                coordinator: address!("97B4EadA67A7979b0685Cfb79D3BCc4d7c9f6Bea"),
+                registry: address!("9618D028B25b3f81c24f068A20DBeEE6a728483C"),
+                coordinator: address!("78015652B5220fcce9e02693e634a6d4612278d0"),
             },
         );
 
