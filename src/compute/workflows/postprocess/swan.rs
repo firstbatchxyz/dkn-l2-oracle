@@ -74,35 +74,36 @@ mod tests {
     #[test]
     fn test_swan_post_processor() {
         const INPUT: &str = r#"
-        some blabla here and there
-        
-        <buy_list>
-        0x4200000000000000000000000000000000000001
-        0x4200000000000000000000000000000000000002
-        0x4200000000000000000000000000000000000003
-        0x4200000000000000000000000000000000000004
-        </buy_list>
-        
-        some more blabla here
+some blabla here and there
+
+<buy_list>
+0x4200000000000000000000000000000000000001
+0x4200000000000000000000000000000000000002
+0x4200000000000000000000000000000000000003
+0x4200000000000000000000000000000000000004
+</buy_list>
+    
+some more blabla here
                 "#;
 
         let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
 
         let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
         assert_eq!(metadata, INPUT, "metadata must be the same as input");
+        let output = output.as_bytes();
 
         // the output is abi encoded 4 addresses, it has 6 elements:
         // offset | length | addr1 | addr2 | addr3 | addr4
         //
         // offset: 2, since addr1 starts from that index
         // length: 4, since there are 4 addresses
-        let expected_output = "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000004200000000000000000000000000000000000001000000000000000000000000420000000000000000000000000000000000000200000000000000000000000042000000000000000000000000000000000000030000000000000000000000004200000000000000000000000000000000000004";
+        let expected_output = hex_literal::hex!("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000004200000000000000000000000000000000000001000000000000000000000000420000000000000000000000000000000000000200000000000000000000000042000000000000000000000000000000000000030000000000000000000000004200000000000000000000000000000000000004");
         assert_eq!(
             output, expected_output,
             "output must be the same as expected"
         );
 
-        let addresses = <Vec<Address>>::abi_decode(&hex::decode(output).unwrap(), true).unwrap();
+        let addresses = <Vec<Address>>::abi_decode(output, true).unwrap();
         assert_eq!(addresses.len(), 4, "must have 4 addresses");
     }
 
