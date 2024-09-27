@@ -57,9 +57,11 @@ impl PostProcess for SwanPostProcessor {
 
         // `abi.encode` the list of addresses to be decodable by contract
         let addresses_encoded = addresses.abi_encode();
-        let output = hex::encode(addresses_encoded);
 
-        Ok((output, input))
+        // we need to send the bytes as-is, no need for hex encoding here
+        let output = String::from_utf8_lossy(&addresses_encoded);
+
+        Ok((output.into(), input))
     }
 }
 
@@ -69,21 +71,21 @@ mod tests {
 
     use super::*;
 
-    const INPUT: &str = r#"
-some blabla here and there
-
-<buy_list>
-0x4200000000000000000000000000000000000001
-0x4200000000000000000000000000000000000002
-0x4200000000000000000000000000000000000003
-0x4200000000000000000000000000000000000004
-</buy_list>
-
-some more blabla here
-        "#;
-
     #[test]
     fn test_swan_post_processor() {
+        const INPUT: &str = r#"
+        some blabla here and there
+        
+        <buy_list>
+        0x4200000000000000000000000000000000000001
+        0x4200000000000000000000000000000000000002
+        0x4200000000000000000000000000000000000003
+        0x4200000000000000000000000000000000000004
+        </buy_list>
+        
+        some more blabla here
+                "#;
+
         let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
 
         let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
@@ -102,5 +104,27 @@ some more blabla here
 
         let addresses = <Vec<Address>>::abi_decode(&hex::decode(output).unwrap(), true).unwrap();
         assert_eq!(addresses.len(), 4, "must have 4 addresses");
+    }
+
+    #[test]
+    fn test_swan_post_processor_2() {
+        const INPUT: &str = r#"
+<shop_list>
+0x36f55f830D6E628a78Fcb70F73f9D005BaF88eE3
+0xAd75C9358799e830F0c23a4BB28dF4D2cCCc8846
+0x26F5B12b67D5F006826824A73F58b88D6bdAA74B
+0x671527de058BaD60C6151cA29d501C87439bCF62
+0x66FC9dC1De3db773891753CD257359A26e876305
+</shop_list>
+"#;
+
+        let post_processor = SwanPostProcessor::new("<shop_list>", "</shop_list>");
+
+        // 0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030353030303030303030303030303030303030303030303030303336663535663833306436653632386137386663623730663733663964303035626166383865653330303030303030303030303030303030303030303030303061643735633933353837393965383330663063323361346262323864663464326363636338383436303030303030303030303030303030303030303030303030323666356231326236376435663030363832363832346137336635386238386436626461613734623030303030303030303030303030303030303030303030303637313532376465303538626164363063363135316361323964353031633837343339626366363230303030303030303030303030303030303030303030303036366663396463316465336462373733383931373533636432353733353961323665383736333035
+        let (output, _) = post_processor.post_process(INPUT.to_string()).unwrap();
+        println!("{}", output);
+
+        let addresses = <Vec<Address>>::abi_decode(&hex::decode(output).unwrap(), true).unwrap();
+        assert_eq!(addresses.len(), 5, "must have 4 addresses");
     }
 }
