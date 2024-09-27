@@ -23,10 +23,9 @@ async fn test_swan() -> Result<()> {
     Print the exact text below, do not reply with anything else:
     
     <shop_list>
-    0x4200000000000000000000000000000000000001
-    0x4200000000000000000000000000000000000002
-    0x4200000000000000000000000000000000000003
-    0x4200000000000000000000000000000000000004
+0x36f55f830D6E628a78Fcb70F73f9D005BaF88eE3
+0x671527de058BaD60C6151cA29d501C87439bCF62
+0x66FC9dC1De3db773891753CD257359A26e876305
     </shop_list>
             "#
         .to_string(),
@@ -122,8 +121,6 @@ async fn test_swan() -> Result<()> {
     let responses = node.get_task_responses(task_id).await?;
     assert_eq!(responses.len(), 1);
     let response = responses.into_iter().next().unwrap();
-    // let output_string = bytes_to_string(&response.output)?;
-    // println!("Output: {}", output_string);
     println!(
         "Output: {:?}",
         Vec::<Address>::abi_decode(&response.output, true)

@@ -42,17 +42,14 @@ pub async fn handle_generation(
     // execute task
     let protocol_string = bytes32_to_string(&protocol)?;
     let executor = Executor::new(model);
-    let (output_str, metadata_str) = executor
+    let (output, metadata) = executor
         .execute_raw(&request.input, &protocol_string)
         .await?;
-    log::debug!("Output: {}", output_str);
-    let output = output_str.as_bytes().to_vec();
-    let metadata = metadata_str.as_bytes().to_vec();
 
     // do the Arweave trick for large inputs
     let arweave = Arweave::new_from_env()?;
-    let output = arweave.put_if_large(output.into()).await?;
-    let metadata = arweave.put_if_large(metadata.into()).await?;
+    let output = arweave.put_if_large(output).await?;
+    let metadata = arweave.put_if_large(metadata).await?;
 
     // mine nonce
     let nonce = mine_nonce(

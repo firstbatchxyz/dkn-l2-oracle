@@ -9,7 +9,7 @@ use crate::data::{Arweave, OracleExternalData};
 #[async_trait(?Send)]
 pub trait WorkflowsExt {
     async fn prepare_input(&self, input_bytes: &Bytes) -> Result<(Option<Entry>, Workflow)>;
-    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)>;
+    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(Bytes, Bytes)>;
 
     /// Returns a generation workflow for the executor.
     #[inline]
@@ -60,13 +60,14 @@ impl WorkflowsExt for Executor {
     /// The workflow & entry is derived from the input.
     ///
     /// Returns output and metadata.
-    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(String, String)> {
+    async fn execute_raw(&self, input_bytes: &Bytes, protocol: &str) -> Result<(Bytes, Bytes)> {
         // parse & prepare input
         let (entry, workflow) = self.prepare_input(input_bytes).await?;
 
         // obtain raw output
         let mut memory = ProgramMemory::new();
         let output = self.execute(entry.as_ref(), workflow, &mut memory).await?;
+        log::debug!("Output: {}", output);
 
         // post-process output w.r.t protocol
         match protocol.split('/').next().unwrap_or_default() {

@@ -1,4 +1,4 @@
-use alloy::sol_types::SolValue;
+use alloy::{primitives::Bytes, sol_types::SolValue};
 use eyre::Result;
 use std::str::FromStr;
 
@@ -28,7 +28,7 @@ impl SwanPostProcessor {
 impl PostProcess for SwanPostProcessor {
     const PROTOCOL: &'static str = "swan";
 
-    fn post_process(&self, input: String) -> Result<(String, String)> {
+    fn post_process(&self, input: String) -> Result<(Bytes, Bytes)> {
         // we will cast strings to Address here
         use alloy::primitives::Address;
 
@@ -58,16 +58,13 @@ impl PostProcess for SwanPostProcessor {
         // `abi.encode` the list of addresses to be decodable by contract
         let addresses_encoded = addresses.abi_encode();
 
-        // we need to send the bytes as-is, no need for hex encoding here
-        let output = String::from_utf8_lossy(&addresses_encoded);
-
-        Ok((output.into(), input))
+        Ok((Bytes::from(addresses_encoded), Bytes::from(input)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use alloy::primitives::Address;
+    use alloy::{hex::FromHex, primitives::Address};
 
     use super::*;
 
@@ -89,22 +86,25 @@ some more blabla here
         let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
 
         let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
-        assert_eq!(metadata, INPUT, "metadata must be the same as input");
-        let output = output.as_bytes();
+        assert_eq!(
+            metadata,
+            Bytes::from(INPUT),
+            "metadata must be the same as input"
+        );
 
         // the output is abi encoded 4 addresses, it has 6 elements:
         // offset | length | addr1 | addr2 | addr3 | addr4
         //
         // offset: 2, since addr1 starts from that index
         // length: 4, since there are 4 addresses
-        let expected_output = hex_literal::hex!("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000004200000000000000000000000000000000000001000000000000000000000000420000000000000000000000000000000000000200000000000000000000000042000000000000000000000000000000000000030000000000000000000000004200000000000000000000000000000000000004");
+        let expected_output = Bytes::from_hex("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000040000000000000000000000004200000000000000000000000000000000000001000000000000000000000000420000000000000000000000000000000000000200000000000000000000000042000000000000000000000000000000000000030000000000000000000000004200000000000000000000000000000000000004").unwrap();
         assert_eq!(
             output, expected_output,
             "output must be the same as expected"
         );
 
-        let addresses = <Vec<Address>>::abi_decode(output, true).unwrap();
-        assert_eq!(addresses.len(), 4, "must have 4 addresses");
+        let addresses = <Vec<Address>>::abi_decode(&output, true).unwrap();
+        assert_eq!(addresses.len(), 4, "must have listed addresses");
     }
 
     #[test]
@@ -121,11 +121,10 @@ some more blabla here
 
         let post_processor = SwanPostProcessor::new("<shop_list>", "</shop_list>");
 
-        // 0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303230303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030353030303030303030303030303030303030303030303030303336663535663833306436653632386137386663623730663733663964303035626166383865653330303030303030303030303030303030303030303030303061643735633933353837393965383330663063323361346262323864663464326363636338383436303030303030303030303030303030303030303030303030323666356231326236376435663030363832363832346137336635386238386436626461613734623030303030303030303030303030303030303030303030303637313532376465303538626164363063363135316361323964353031633837343339626366363230303030303030303030303030303030303030303030303036366663396463316465336462373733383931373533636432353733353961323665383736333035
         let (output, _) = post_processor.post_process(INPUT.to_string()).unwrap();
         println!("{}", output);
 
-        let addresses = <Vec<Address>>::abi_decode(&hex::decode(output).unwrap(), true).unwrap();
-        assert_eq!(addresses.len(), 5, "must have 4 addresses");
+        let addresses = <Vec<Address>>::abi_decode(&output, true).unwrap();
+        assert_eq!(addresses.len(), 5, "must have listed addresses");
     }
 }

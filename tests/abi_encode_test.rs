@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use alloy::{
     network::EthereumWallet,
     node_bindings::Anvil,
-    primitives::{address, keccak256, Bytes, U256},
+    primitives::{address, keccak256, Address, Bytes, U256},
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
     sol,
@@ -124,6 +126,14 @@ async fn test_encode() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_decode() -> Result<()> {
+    let b = Bytes::from_str("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000060000000000000000000000007befbfbd18777d12efbfbdefbfbdefbfbd79466b6fefbfbd6cefbfbd01efbfbd380000000000000000000000007c467217056444efbfbdd99ac6ab0231efbfbd55efbfbdefbfbd240f0000000000000000000000005defbfbd0b2b3d4eefbfbd3b45efbfbd42efbfbd0457efbfbdefbfbd1b64664f000000000000000000000000efbfbdefbfbd66efbfbdefbfbdefbfbd13efbfbd56efbfbd4d11efbfbdefbfbdefbfbd5befbfbd7869130000000000000000000000001b0cefbfbd01efbfbdefbfbdefbfbd2862efbfbd5130efbfbdefbfbdefbfbd03efbfbd2defbfbd6800000000000000000000000052efbfbd7a5b2f152133efbfbd773d2969efbfbd15efbfbdefbfbdefbfbdefbfbd")?;
+    let addr = Vec::<Address>::abi_decode(&b, false)?;
+    println!("{:?}", addr);
+
+    Ok(())
+}
+#[tokio::test]
 async fn test_hash() -> Result<()> {
     let anvil = Anvil::new().try_spawn()?;
     let signer: PrivateKeySigner = anvil.keys()[0].clone().into();
@@ -144,3 +154,16 @@ async fn test_hash() -> Result<()> {
 
     Ok(())
 }
+
+// 0x7BA918777d12f9b7EFA979466b6f836c8201CB38
+// 0x7befbfbd18777d12efbfbdefbfbdefbfbd79466b
+//
+// 0x7c46721705644499D99ac6Ab02318555AdCD240F
+// 0x5DE90B2b3D4Eff3b45d242950457B4851b64664F
+// 0xedD466Dcf49B139c56dF4D118AfAd15BE0786913
+// 0x1b0cCb01b088A62862E45130b2F9f203952dB268
+// 0x52F67a5b2f152133D6773D2969b415Ac95EFb7F6
+//
+//
+//
+// [, 0x380000000000000000000000007c467217056444, 0x55efbfbdefbfbd240f0000000000000000000000, 0x3b45efbfbd42efbfbd0457efbfbdefbfbd1b6466, 0x00efbfbdefbfbd66efbfbdefbfbdefbfbd13efbf, 0xbdefbfbd5befbfbd786913000000000000000000]

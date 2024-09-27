@@ -1,3 +1,5 @@
+use alloy::primitives::Bytes;
+
 mod identity;
 pub use identity::*;
 
@@ -11,5 +13,5 @@ pub trait PostProcess {
     const PROTOCOL: &'static str;
 
     /// A post-processing step that takes the raw output from the LLM and splits it into an output and metadata.
-    fn post_process(&self, input: String) -> eyre::Result<(String, String)>;
+    fn post_process(&self, input: String) -> eyre::Result<(Bytes, Bytes)>;
 }
