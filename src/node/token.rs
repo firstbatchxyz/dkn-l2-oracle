@@ -45,7 +45,7 @@ impl DriaOracle {
             .send()
             .await
             .map_err(contract_error_report)
-            .wrap_err("Could not approve tokens.")?;
+            .wrap_err("could not approve tokens")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
         let receipt = tx.get_receipt().await?;

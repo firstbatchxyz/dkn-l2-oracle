@@ -151,7 +151,7 @@ impl OracleExternalData for Arweave {
             .get(url)
             .send()
             .await
-            .wrap_err("Failed to fetch from Arweave")?;
+            .wrap_err("failed to fetch from Arweave")?;
 
         if !response.status().is_success() {
             return Err(eyre!("Failed to fetch from Arweave: {}", response.status()));

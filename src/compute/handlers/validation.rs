@@ -35,9 +35,10 @@ pub async fn handle_validation(
     let scores = (0..request.parameters.numGenerations)
         .map(|_| parse_ether("1.0").unwrap())
         .collect::<Vec<_>>();
-    let metadata = Bytes::default();
 
+    // FIXME: metadata is empty for now, as dummy data
     // FIXME: can add Arweave trick for metadata here
+    let metadata = Bytes::default();
 
     // mine nonce
     let nonce = mine_nonce(
@@ -47,7 +48,7 @@ pub async fn handle_validation(
         &request.input,
         &task_id,
     )
-    .0;
+    .nonce;
 
     let tx_hash = node
         .respond_validation(task_id, scores, metadata, nonce)

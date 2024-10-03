@@ -15,6 +15,7 @@ pub trait OracleExternalData {
     type Value: Clone + Debug;
 
     /// Returns the value (if exists) at the given key.
+    /// Returns an error if the key is invalid or the value does not exist.
     async fn get(&self, key: Self::Key) -> Result<Self::Value>;
 
     /// Puts the value and returns the generated key.

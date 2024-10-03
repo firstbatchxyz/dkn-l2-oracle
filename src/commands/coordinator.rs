@@ -74,7 +74,7 @@ pub async fn run_oracle(
                 Ok(None) => {
                     log::info!("Task {} ignored.", task_id)
                 }
-                Err(e) => log::error!("Could not process task: {}", e),
+                Err(e) => log::error!("Could not process task: {:?}", e),
             }
         }
     }
@@ -83,7 +83,7 @@ pub async fn run_oracle(
     let event_poller = node
         .subscribe_to_tasks()
         .await
-        .wrap_err("Could not subscribe")?;
+        .wrap_err("could not subscribe to tasks")?;
     log::info!(
         "Subscribed to LLMOracleCoordinator ({}) as {}",
         node.addresses.coordinator,
@@ -116,7 +116,7 @@ pub async fn run_oracle(
                         Ok(None) => {
                             log::info!("Task {} ignored.", task_id)
                         }
-                        Err(e) => log::error!("Could not process task: {:#?}", e),
+                        Err(e) => log::error!("Could not process task: {:?}", e),
                     }
                 }
                 Err(e) => log::error!("Could not handle event: {}", e),

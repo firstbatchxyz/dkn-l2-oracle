@@ -4,6 +4,7 @@ pub use cli::cli;
 mod node;
 pub use node::DriaOracle;
 
+/// Node configurations.
 mod configurations;
 pub use configurations::DriaOracleConfig;
 

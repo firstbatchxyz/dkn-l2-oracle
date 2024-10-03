@@ -1,6 +1,12 @@
 use alloy::primitives::{keccak256, Address, Bytes, U256};
 use alloy::sol_types::SolValue;
 
+pub struct NonceResult {
+    pub nonce: U256,
+    pub candidate: U256,
+    pub target: U256,
+}
+
 /// Mines a nonce for the oracle proof-of-work.
 ///
 /// Returns (nonce, candidate, target).
@@ -10,7 +16,7 @@ pub fn mine_nonce(
     responder: &Address,
     input: &Bytes,
     task_id: &U256,
-) -> (U256, U256, U256) {
+) -> NonceResult {
     let big_one = U256::from(1);
     let mut nonce = U256::ZERO;
 
@@ -31,7 +37,11 @@ pub fn mine_nonce(
         let digest = keccak256(message.clone());
         let candidate = U256::from_be_bytes(*digest); // big-endian!
         if candidate < target {
-            return (nonce, candidate, target);
+            return NonceResult {
+                nonce,
+                candidate,
+                target,
+            };
         }
 
         nonce += big_one;
@@ -79,8 +89,11 @@ mod tests {
         let input = Bytes::from_iter("im some bytes yallllll".bytes());
 
         // call contract
-        let (nonce, candidate, target) =
-            mine_nonce(difficulty, &requester, &responder, &input, &task_id);
+        let NonceResult {
+            nonce,
+            candidate,
+            target,
+        } = mine_nonce(difficulty, &requester, &responder, &input, &task_id);
         // println!("Nonce:     {}", nonce);
         // println!("Target:    {:x}", target);
         // println!("Candidate: {:x}", candidate);
@@ -107,12 +120,15 @@ mod tests {
         let task_id = U256::from(0x1234);
         let difficulty = 2;
 
-        let (nonce, _candidate, _target) =
-            mine_nonce(difficulty, &requester, &responder, &input, &task_id);
+        let NonceResult {
+            nonce,
+            candidate,
+            target,
+        } = mine_nonce(difficulty, &requester, &responder, &input, &task_id);
         assert!(!nonce.is_zero());
 
         println!("Nonce: {}", nonce);
-        println!("Target: {:x}", _target);
-        println!("Candidate: {:x}", _candidate);
+        println!("Target: {:x}", target);
+        println!("Candidate: {:x}", candidate);
     }
 }

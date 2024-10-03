@@ -115,11 +115,11 @@ pub async fn cli() -> Result<()> {
     let secret_key = cli.secret_key;
 
     // create node
-    let config =
-        DriaOracleConfig::new(&secret_key, rpc_url).wrap_err("Could not create oracle config.")?;
+    let config = DriaOracleConfig::new(&secret_key, rpc_url)
+        .wrap_err("could not create oracle configuration")?;
     let node = DriaOracle::new(config)
         .await
-        .wrap_err("Could not create oracle node.")?;
+        .wrap_err("could not create oracle node")?;
     log::info!("{}", node);
     log::info!("{}", node.addresses);
 
@@ -167,6 +167,8 @@ pub async fn cli() -> Result<()> {
             num_gens,
             num_vals,
         } => {
+            const PROTOCOL: &str = concat!("oracle-cli/", env!("CARGO_PKG_VERSION"));
+
             commands::request_task(
                 &node,
                 &input,
@@ -174,7 +176,7 @@ pub async fn cli() -> Result<()> {
                 difficulty,
                 num_gens,
                 num_vals,
-                format!("oracle-cli/{}", env!("CARGO_PKG_VERSION")),
+                PROTOCOL.to_string(),
             )
             .await?
         }

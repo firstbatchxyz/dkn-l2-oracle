@@ -8,14 +8,14 @@ use super::PostProcess;
 /// and returns the intermediate strings as an array of strings.
 ///
 /// The original input is kept as metadata.
-pub struct SwanPostProcessor {
+pub struct SwanPurchasePostProcessor {
     /// Start marker to look for to start collecting assets.
     start_marker: &'static str,
     /// End marker to look for to stop collecting assets.
     end_marker: &'static str,
 }
 
-impl SwanPostProcessor {
+impl SwanPurchasePostProcessor {
     /// Create a new `SwanPostProcessor` with the given start and end markers.
     pub fn new(start_marker: &'static str, end_marker: &'static str) -> Self {
         Self {
@@ -25,8 +25,8 @@ impl SwanPostProcessor {
     }
 }
 
-impl PostProcess for SwanPostProcessor {
-    const PROTOCOL: &'static str = "swan";
+impl PostProcess for SwanPurchasePostProcessor {
+    const PROTOCOL: &'static str = "swan-buyer-purchase";
 
     fn post_process(&self, input: String) -> Result<(Bytes, Bytes)> {
         // we will cast strings to Address here
@@ -69,7 +69,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_swan_post_processor() {
+    fn test_swan_purchase_post_processor() {
         const INPUT: &str = r#"
 some blabla here and there
 
@@ -83,7 +83,7 @@ some blabla here and there
 some more blabla here
                 "#;
 
-        let post_processor = SwanPostProcessor::new("<buy_list>", "</buy_list>");
+        let post_processor = SwanPurchasePostProcessor::new("<buy_list>", "</buy_list>");
 
         let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
         assert_eq!(
@@ -119,7 +119,7 @@ some more blabla here
 </shop_list>
 "#;
 
-        let post_processor = SwanPostProcessor::new("<shop_list>", "</shop_list>");
+        let post_processor = SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>");
 
         let (output, _) = post_processor.post_process(INPUT.to_string()).unwrap();
         println!("{}", output);

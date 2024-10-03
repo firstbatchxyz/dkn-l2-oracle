@@ -10,6 +10,7 @@ pub use swan::*;
 /// It's input is the raw output from the LLM, and it splits it into an output and metadata.
 /// The output is the main thing that is used within the contract, metadata is externally checked.
 pub trait PostProcess {
+    /// Protocol string name, for instance if protocol is `foobar/1.0`, this should be `foobar`.
     const PROTOCOL: &'static str;
 
     /// A post-processing step that takes the raw output from the LLM and splits it into an output and metadata.

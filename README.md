@@ -27,7 +27,16 @@ dkn-oracle help
 
 ## Setup
 
-TODO: We will use a launcher for this
+Create an `.env` file by copying `.env.example`. You have to fill the following variables:
+
+- Get an RPC URL from a provider such as Alchemy or Infura, and set it as `RPC_URL`.
+- Provide an Ethereum wallet secret koy to `SECRET_KEY`, make sure it has funds to pay for gas and tokens.
+- Provide an Arweave wallet so that you can use Arweave for large results. Alternatively, dont provide a wallet but instead set `ARWEAVE_BYTE_LIMIT` to a very large value.
+
+As for the LLM providers:
+
+- If you are using Ollama, make sure it is running and the host & port are correct.
+- If you are using OpenAI, make sure you provide the `OPENAI_API_KEY`.
 
 ## Usage
 

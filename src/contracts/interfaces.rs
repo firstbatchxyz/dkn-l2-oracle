@@ -124,7 +124,7 @@ impl std::fmt::Display for OracleKind {
 
 /// Small utility to convert bytes to string.
 pub fn bytes_to_string(bytes: &Bytes) -> Result<String> {
-    String::from_utf8(bytes.to_vec()).wrap_err("Could not convert bytes to string")
+    String::from_utf8(bytes.to_vec()).wrap_err("could not convert bytes to string")
 }
 
 /// Small utility to convert string to bytes.
@@ -141,7 +141,7 @@ pub fn bytes32_to_string(bytes: &FixedBytes<32>) -> Result<String> {
     } else {
         return Err(eyre::eyre!("Could not find null terminator in bytes32"));
     }
-    String::from_utf8(bytes).wrap_err("Could not convert bytes to string")
+    String::from_utf8(bytes).wrap_err("could not convert bytes to string")
 }
 
 /// Small utility to convert string to bytes32.
