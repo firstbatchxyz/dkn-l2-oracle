@@ -6,7 +6,7 @@ use eyre::Result;
 ///
 /// - If the node is already registered, it will do nothing.
 /// - If the node is not registered, it will approve the required amount of tokens
-/// to the registry and then register the node.
+///   to the registry and then register the node.
 pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
     log::info!("Registering as a {}.", kind);
     // check if registered already
@@ -56,7 +56,7 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
 ///
 /// - If the node is not registered, it will do nothing.
 /// - If the node is registered, it will unregister the node and transfer all allowance
-/// from the registry back to the oracle.
+///   from the registry back to the oracle.
 pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
     log::info!("Unregistering as {}.", kind);
     // check if not registered anyways

@@ -37,7 +37,7 @@ impl WorkflowsExt for Executor {
                     .get(input_str)
                     .await
                     .wrap_err("could not download from Arweave")?;
-                self.prepare_input(&input_bytes.into()).await
+                self.prepare_input(&input_bytes).await
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
                 let entry = Some(Entry::String(input_str));

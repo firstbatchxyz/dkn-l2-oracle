@@ -14,7 +14,7 @@ use ollama_workflows::Executor;
 /// Handles a generation request.
 ///
 /// 1. First, we check if we have already responded to the task. Contract will revert even if we dont do this check ourselves,
-/// but its better to provide the error here.
+///    but its better to provide the error here.
 ///
 /// 2. Then, we check if our models are compatible with the request. If not, we return an error.
 pub async fn handle_generation(

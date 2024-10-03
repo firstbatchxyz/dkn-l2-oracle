@@ -101,11 +101,9 @@ impl From<OracleCoordinatorErrors> for ErrReport {
             OracleCoordinatorErrors::AlreadyResponded(e) => {
                 eyre!("Already responded to task {}", e.taskId)
             }
-            OracleCoordinatorErrors::InsufficientRewards(e) => eyre!(
-                "Insufficient rewards (have: {}, want: {})",
-                e.given,
-                e.required
-            ),
+            OracleCoordinatorErrors::InsufficientFees(e) => {
+                eyre!("Insufficient fees (have: {}, want: {})", e.have, e.want)
+            }
             OracleCoordinatorErrors::InvalidParameterRange(e) => {
                 eyre!(
                     "Invalid parameter range: {} <= {}* <= {}",
