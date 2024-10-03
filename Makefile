@@ -18,6 +18,10 @@ debug:
 		RUST_LOG=none,dkn_oracle=debug,ollama_workflows=info cargo run start
 
 ###############################################################################
+.PHONY: install #        | Install to path
+build:
+		cargo install --path .
+		
 .PHONY: build #        | Build
 build:
 		cargo build
