@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM rust:1.75 as builder
+FROM --platform=$BUILDPLATFORM rust:1.81.0 as builder
 
 # https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
 #
@@ -21,9 +21,7 @@ COPY . .
 RUN cargo build --release
 
 # copy release binary to distroless
-FROM --platform=$BUILDPLATFORM gcr.io/distroless/cc
+FROM --platform=$BUILDPLATFORM gcr.io/distroless/cc AS gpt
 COPY --from=builder /usr/src/app/target/release/dkn-oracle /
 
-EXPOSE 8080
-
-CMD ["./dkn-oracle", "start"]
+ENTRYPOINT ["./dkn-oracle"]
