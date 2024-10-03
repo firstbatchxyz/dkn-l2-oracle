@@ -19,7 +19,7 @@ debug:
 
 ###############################################################################
 .PHONY: install #        | Install to path
-build:
+install:
 		cargo install --path .
 		
 .PHONY: build #        | Build
