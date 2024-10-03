@@ -56,5 +56,5 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/dkn-l2-oracle-gpt:dev
-            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/dkn-l2-oracle-gpt:${{ env.IMAGE_TAG }}
+            974464413599.dkr.ecr.us-east-1.amazonaws.com/dkn-l2-oracle-gpt:dev
+            974464413599.dkr.ecr.us-east-1.amazonaws.com/dkn-l2-oracle-gpt:${{ env.IMAGE_TAG }}
