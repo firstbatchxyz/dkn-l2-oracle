@@ -36,7 +36,7 @@ impl WorkflowsExt for Executor {
                 let input_bytes = Arweave::default()
                     .get(input_str)
                     .await
-                    .wrap_err("Could not download from Arweave")?;
+                    .wrap_err("could not download from Arweave")?;
                 self.prepare_input(&input_bytes.into()).await
             } else {
                 // it is not a key, so we treat it as a generation request with plaintext input
@@ -71,8 +71,8 @@ impl WorkflowsExt for Executor {
 
         // post-process output w.r.t protocol
         match protocol.split('/').next().unwrap_or_default() {
-            SwanPostProcessor::PROTOCOL => {
-                SwanPostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
+            SwanPurchasePostProcessor::PROTOCOL => {
+                SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
             }
             _ => IdentityPostProcessor.post_process(output),
         }

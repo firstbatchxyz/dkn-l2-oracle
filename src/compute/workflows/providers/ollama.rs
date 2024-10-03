@@ -89,7 +89,7 @@ impl ProvidersExt for OllamaConfig {
         let local_models = ollama
             .list_local_models()
             .await
-            .wrap_err("Could not fetch local models from Ollama, is it online?")?;
+            .wrap_err("could not fetch local models from Ollama, is it online?")?;
 
         // check that each required model exists here
         log::debug!("Checking required models: {:#?}", required_models);
@@ -106,7 +106,7 @@ impl ProvidersExt for OllamaConfig {
                     let status = ollama
                         .pull_model(model, false)
                         .await
-                        .wrap_err("Error pulling model with Ollama")?;
+                        .wrap_err("could not pull model from Ollama")?;
                     log::debug!("Pulled model with Ollama, final status: {:#?}", status);
                 } else {
                     // otherwise, give error

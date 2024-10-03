@@ -51,10 +51,11 @@ impl DriaOracle {
             .wallet(config.wallet.clone())
             .on_http(config.rpc_url.clone());
 
+        // fetch the chain id so that we can use the correct addresses
         let chain_id_u64 = provider
             .get_chain_id()
             .await
-            .wrap_err("Could not get chain id")?;
+            .wrap_err("could not get chain id")?;
         let chain = Chain::from_id(chain_id_u64);
 
         let node = Self {
@@ -82,17 +83,6 @@ impl DriaOracle {
             config: self.config.clone().with_wallet(wallet),
             addresses: self.addresses.clone(),
         }
-    }
-
-    /// Returns the connected chain.
-    pub async fn get_chain(&self) -> Result<Chain> {
-        let chain_id_u64 = self
-            .provider
-            .get_chain_id()
-            .await
-            .wrap_err("Could not get chain id")?;
-
-        Ok(Chain::from_id(chain_id_u64))
     }
 
     /// Returns the native token balance of a given address.

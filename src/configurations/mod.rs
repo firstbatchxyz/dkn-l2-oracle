@@ -46,12 +46,12 @@ impl DriaOracleConfig {
             .wrap_err("SECRET_KEY is not set")
             .suggestion("SECRET_KEY must be within .env.")?;
         let secret_key = B256::from_hex(private_key_hex)
-            .wrap_err("Could not hex-decode secret key")
+            .wrap_err("could not hex-decode secret key")
             .suggestion("SECRET_KEY must be within .env and be hexadecimals.")?;
 
         // parse rpc url
         let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
-        let rpc_url = Url::parse(&rpc_url_env).wrap_err("Could not parse RPC URL.")?;
+        let rpc_url = Url::parse(&rpc_url_env).wrap_err("could not parse RPC_URL")?;
 
         Self::new(&secret_key, rpc_url)
     }
@@ -100,7 +100,7 @@ impl DriaOracleConfig {
     /// Change the signer with a new one with the given secret key.
     pub fn with_secret_key(&mut self, secret_key: &B256) -> Result<&mut Self> {
         let signer =
-            PrivateKeySigner::from_bytes(secret_key).wrap_err("Could not parse private key")?;
+            PrivateKeySigner::from_bytes(secret_key).wrap_err("could not parse private key")?;
         self.wallet.register_default_signer(signer);
         Ok(self)
     }

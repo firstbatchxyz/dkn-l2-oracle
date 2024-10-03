@@ -35,7 +35,7 @@ impl DriaOracle {
             .send()
             .await
             .map_err(contract_error_report)
-            .wrap_err("Could not request task.")?;
+            .wrap_err("could not request task")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
         let receipt = tx.get_receipt().await?;

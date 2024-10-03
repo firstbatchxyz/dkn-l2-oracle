@@ -24,7 +24,9 @@ impl ProvidersExt for OpenAIConfig {
         log::info!("Checking OpenAI requirements");
 
         // just check openai
-        let _ = std::env::var(OPENAI_API_KEY).wrap_err("OpenAI API key not found")?;
+        let _ = std::env::var(OPENAI_API_KEY).wrap_err("OPENAI_API_KEY not found")?;
+
+        // TODO: check model here as well
 
         Ok(())
     }

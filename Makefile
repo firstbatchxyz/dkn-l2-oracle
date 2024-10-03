@@ -22,9 +22,9 @@ debug:
 build:
 		cargo build
 
-.PHONY: docs #         | Generate & open crate documentation
+.PHONY: docs #         | Generate & open documentation
 docs:
-		cargo doc --open --no-deps
+		cargo doc --open --no-deps --document-private-items
 
 .PHONY: lint #         | Run clippy
 lint:

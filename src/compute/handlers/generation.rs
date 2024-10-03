@@ -32,7 +32,7 @@ pub async fn handle_generation(
     let request = node
         .get_task_request(task_id)
         .await
-        .wrap_err("Could not get task")?;
+        .wrap_err("could not get task")?;
 
     // choose model based on the request
     let models_string = bytes_to_string(&request.models)?;
@@ -59,7 +59,7 @@ pub async fn handle_generation(
         &request.input,
         &task_id,
     )
-    .0;
+    .nonce;
 
     // respond
     let tx_hash = node
