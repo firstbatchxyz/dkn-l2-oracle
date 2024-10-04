@@ -14,7 +14,9 @@ pub trait WorkflowsExt {
     /// Returns a generation workflow for the executor.
     #[inline]
     fn get_generation_workflow(&self) -> Result<Workflow> {
-        Ok(serde_json::from_str(include_str!("generation.json"))?)
+        Ok(serde_json::from_str(include_str!(
+            "presets/generation.json"
+        ))?)
     }
 }
 
@@ -116,7 +118,7 @@ mod tests {
     async fn test_parse_input_workflow() {
         let executor = Executor::new(Default::default());
 
-        let workflow_str = include_str!("generation.json");
+        let workflow_str = include_str!("presets/generation.json");
         let (entry, _) = executor
             .prepare_input(&workflow_str.as_bytes().into())
             .await
