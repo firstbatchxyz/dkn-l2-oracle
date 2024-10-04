@@ -3,7 +3,6 @@ use alloy::{
     transports::http::reqwest::Url,
 };
 
-use color_eyre::Section;
 use eyre::{Context, Result};
 use std::env;
 
@@ -18,10 +17,7 @@ pub struct DriaOracleConfig {
 
 impl Default for DriaOracleConfig {
     fn default() -> Self {
-        Self::new_from_env()
-            .and_then(Self::enable_color_eyre)
-            .unwrap()
-            .enable_logs()
+        Self::new_from_env().unwrap().enable_logs()
     }
 }
 
@@ -40,14 +36,10 @@ impl DriaOracleConfig {
     /// - `SECRET_KEY`
     /// - `RPC_URL`
     pub fn new_from_env() -> Result<Self> {
-        dotenvy::dotenv()?;
         // parse private key
-        let private_key_hex = env::var("SECRET_KEY")
-            .wrap_err("SECRET_KEY is not set")
-            .suggestion("SECRET_KEY must be within .env.")?;
-        let secret_key = B256::from_hex(private_key_hex)
-            .wrap_err("could not hex-decode secret key")
-            .suggestion("SECRET_KEY must be within .env and be hexadecimals.")?;
+        let private_key_hex = env::var("SECRET_KEY").wrap_err("SECRET_KEY is not set")?;
+        let secret_key =
+            B256::from_hex(private_key_hex).wrap_err("could not hex-decode secret key")?;
 
         // parse rpc url
         let rpc_url_env = env::var("RPC_URL").wrap_err("RPC_URL is not set")?;
@@ -87,14 +79,6 @@ impl DriaOracleConfig {
             log::error!("Error during env_logger::try_init: {}", e);
         }
         self
-    }
-
-    /// Enables colored `eyre` error reports.
-    pub fn enable_color_eyre(self) -> Result<Self> {
-        if let Err(e) = color_eyre::install() {
-            log::error!("Error during color_eyre::install: {}", e);
-        }
-        Ok(self)
     }
 
     /// Change the signer with a new one with the given secret key.

@@ -22,7 +22,6 @@ pub async fn display_rewards(node: &DriaOracle) -> Result<()> {
 
     log::info!("Claimable rewards:");
     log::info!("{} ", allowance);
-
     if allowance.amount.is_zero() {
         log::warn!("You have no claimable rewards!");
     }

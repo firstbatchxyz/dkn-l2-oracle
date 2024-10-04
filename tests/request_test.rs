@@ -11,6 +11,8 @@ use ollama_workflows::Model;
 
 #[tokio::test]
 async fn test_request() -> Result<()> {
+    dotenvy::dotenv().unwrap();
+
     // task setup
     let difficulty = 1;
     let num_gens = 1;

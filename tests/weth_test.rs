@@ -10,6 +10,8 @@ use eyre::Result;
 
 #[tokio::test]
 async fn test_weth_transfer() -> Result<()> {
+    dotenvy::dotenv().unwrap();
+
     // amount of WETH that will be transferred
     let amount = parse_ether("100")?;
 

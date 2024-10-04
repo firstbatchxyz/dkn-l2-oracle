@@ -49,7 +49,7 @@ The CLI provides several methods to interact with the oracle contracts.
 
 ### Registration
 
-To serve oracle requests, you must first register as your desired oracle type, i.e. `generator` or `validator`. These are handled by the registration commands `register` and `unregister` which accepts multiple arguments to register at once. You can then see your registrations with `registrations` command.
+To serve oracle requests, you **MUST** first register as your desired oracle type, i.e. `generator` or `validator`. These are handled by the registration commands `register` and `unregister` which accepts multiple arguments to register at once. You can then see your registrations with `registrations` command.
 
 Here is an example:
 

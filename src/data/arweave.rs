@@ -50,7 +50,7 @@ pub struct Arweave {
     /// - https://gateway.irys.xyz
     /// - https://node1.bundlr.network
     base_url: Url,
-    /// Reqwest client
+    /// Reqwest client.
     client: Client,
     /// Byte limit for the data to be considered for Arweave.
     ///
@@ -64,7 +64,7 @@ impl Arweave {
     pub fn new(base_url: &str, wallet: &str, byte_limit: usize) -> Result<Self> {
         Ok(Self {
             wallet: PathBuf::from(wallet),
-            base_url: Url::parse(base_url)?,
+            base_url: Url::parse(base_url).wrap_err("could not parse base URL")?,
             client: Client::new(),
             byte_limit,
         })
@@ -73,18 +73,19 @@ impl Arweave {
     /// Creates a new Arweave instance from the environment variables.
     ///
     /// Required environment variables:
+    ///
     /// - `ARWEAVE_WALLET_PATH`
     /// - `ARWEAVE_BASE_URL`
     /// - `ARWEAVE_BYTE_LIMIT`
     ///
     /// All these variables have defaults if they are missing.
     pub fn new_from_env() -> Result<Self> {
-        dotenvy::dotenv()?;
         let wallet = env::var("ARWEAVE_WALLET_PATH").unwrap_or(DEFAULT_WALLET_PATH.to_string());
         let base_url = env::var("ARWEAVE_BASE_URL").unwrap_or(DEFAULT_BASE_URL.to_string());
         let byte_limit = env::var("ARWEAVE_BYTE_LIMIT")
             .unwrap_or(DEFAULT_BYTE_LIMIT.to_string())
-            .parse::<usize>()?;
+            .parse::<usize>()
+            .wrap_err("could not parse ARWEAVE_BYTE_LIMIT")?;
 
         Self::new(&base_url, &wallet, byte_limit)
     }
@@ -95,7 +96,9 @@ impl Arweave {
     /// we want to use hexadecimals to read them easily on-chain.
     #[inline(always)]
     pub fn base64_to_hex(key: &str) -> Result<String> {
-        let decoded_key = BASE64_URL_SAFE_NO_PAD.decode(key.as_bytes())?;
+        let decoded_key = BASE64_URL_SAFE_NO_PAD
+            .decode(key.as_bytes())
+            .wrap_err("could not decode base64 url")?;
         Ok(hex::encode(decoded_key))
     }
 
@@ -105,7 +108,7 @@ impl Arweave {
     /// we want to use hexadecimals to read them easily on-chain.
     #[inline(always)]
     pub fn hex_to_base64(key: &str) -> Result<String> {
-        let decoded_key = hex::decode(key)?;
+        let decoded_key = hex::decode(key).wrap_err("could not decode hexadecimals")?;
         Ok(BASE64_URL_SAFE_NO_PAD.encode(&decoded_key))
     }
 

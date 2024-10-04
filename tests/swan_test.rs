@@ -14,6 +14,8 @@ use ollama_workflows::Model;
 
 #[tokio::test]
 async fn test_swan() -> Result<()> {
+    dotenvy::dotenv().unwrap();
+
     // task setup
     let difficulty = 1;
     let models = string_to_bytes(Model::GPT4Turbo.to_string());

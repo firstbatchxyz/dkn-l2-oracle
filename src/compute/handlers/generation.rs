@@ -23,23 +23,31 @@ pub async fn handle_generation(
     task_id: U256,
     protocol: FixedBytes<32>,
 ) -> Result<Option<TransactionReceipt>> {
+    log::info!("Handling generation task {}", task_id);
+
+    // check if we have validated anyways
+    log::debug!("Checking existing generation esponses");
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address()) {
         log::debug!("Already responded to {} with generation", task_id);
         return Ok(None);
     }
 
+    // fetch the request from contract
+    log::debug!("Fetching the task request");
     let request = node
         .get_task_request(task_id)
         .await
         .wrap_err("could not get task")?;
 
     // choose model based on the request
+    log::debug!("Choosing model to use");
     let models_string = bytes_to_string(&request.models)?;
     let (_, model) = models.get_any_matching_model_from_csv(&models_string)?;
     log::debug!("Using model: {} from {}", model, models_string);
 
     // execute task
+    log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
     let executor = Executor::new(model);
     let (output, metadata) = executor
@@ -47,11 +55,13 @@ pub async fn handle_generation(
         .await?;
 
     // do the Arweave trick for large inputs
-    let arweave = Arweave::new_from_env()?;
+    log::debug!("Uploading to Arweave if required");
+    let arweave = Arweave::new_from_env().wrap_err("could not create Arweave instance")?;
     let output = arweave.put_if_large(output).await?;
     let metadata = arweave.put_if_large(metadata).await?;
 
     // mine nonce
+    log::debug!("Mining nonce for task");
     let nonce = mine_nonce(
         request.parameters.difficulty,
         &request.requester,
@@ -62,8 +72,9 @@ pub async fn handle_generation(
     .nonce;
 
     // respond
-    let tx_hash = node
+    log::debug!("Responding with generation");
+    let tx_receipt = node
         .respond_generation(task_id, output, metadata, nonce)
         .await?;
-    Ok(Some(tx_hash))
+    Ok(Some(tx_receipt))
 }
