@@ -1,9 +1,9 @@
-use super::ModelConfig;
 use crate::{
     contracts::{OracleCoordinator::StatusUpdate, OracleKind, TaskStatus},
     DriaOracle,
 };
 use alloy::rpc::types::TransactionReceipt;
+use dkn_workflows::DriaWorkflowsConfig;
 use eyre::Result;
 
 mod generation;
@@ -21,7 +21,7 @@ use validation::*;
 pub async fn handle_request(
     node: &DriaOracle,
     kinds: &[OracleKind],
-    model_config: &ModelConfig,
+    model_config: &DriaWorkflowsConfig,
     event: StatusUpdate,
 ) -> Result<Option<TransactionReceipt>> {
     log::debug!("Received event for task {} ()", event.taskId);

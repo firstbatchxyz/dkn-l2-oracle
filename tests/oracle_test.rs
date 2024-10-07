@@ -1,10 +1,10 @@
 use alloy::{eips::BlockNumberOrTag, primitives::utils::parse_ether};
 use dkn_oracle::{
     bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
-    ModelConfig, OracleKind, TaskStatus, WETH,
+    OracleKind, TaskStatus, WETH,
 };
+use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::Result;
-use ollama_workflows::Model;
 
 #[tokio::test]
 async fn test_oracle() -> Result<()> {
@@ -18,7 +18,7 @@ async fn test_oracle() -> Result<()> {
     println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
-    let model_config = ModelConfig::new(vec![Model::GPT4Turbo]);
+    let model_config = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::anvil_new(config).await?;
 

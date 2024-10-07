@@ -1,19 +1,13 @@
 mod executor;
 pub use executor::WorkflowsExt;
 
-mod models;
-pub use models::ModelConfig;
-
-mod providers;
-pub use providers::*;
-
 mod postprocess;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::Bytes;
-    use ollama_workflows::{Entry, Executor, Model, ProgramMemory};
+    use dkn_workflows::ollama_workflows::{Entry, Executor, Model, ProgramMemory};
 
     #[tokio::test]
     #[ignore = "run this manually"]

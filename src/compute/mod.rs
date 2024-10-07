@@ -5,4 +5,4 @@ mod nonce;
 pub use nonce::mine_nonce;
 
 mod workflows;
-pub use workflows::{ModelConfig, WorkflowsExt};
+pub use workflows::WorkflowsExt;

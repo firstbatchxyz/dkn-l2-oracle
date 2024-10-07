@@ -5,8 +5,8 @@ use alloy::{
     primitives::{B256, U256},
 };
 use clap::{Parser, Subcommand};
+use dkn_workflows::Model;
 use eyre::{eyre, Context, Result};
-use ollama_workflows::Model;
 use reqwest::Url;
 
 /// `value_parser` to parse a `str` to `OracleKind`.

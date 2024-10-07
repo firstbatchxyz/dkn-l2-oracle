@@ -9,7 +9,7 @@ mod configurations;
 pub use configurations::DriaOracleConfig;
 
 mod compute;
-pub use compute::{handle_request, mine_nonce, ModelConfig};
+pub use compute::{handle_request, mine_nonce};
 
 mod contracts;
 pub use contracts::{bytes32_to_string, bytes_to_string, string_to_bytes, string_to_bytes32};

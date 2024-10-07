@@ -6,8 +6,8 @@
 
 use alloy::primitives::utils::parse_ether;
 use dkn_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
+use dkn_workflows::Model;
 use eyre::Result;
-use ollama_workflows::Model;
 
 #[tokio::test]
 async fn test_request() -> Result<()> {
