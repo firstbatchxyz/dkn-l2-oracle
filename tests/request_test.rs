@@ -14,9 +14,7 @@ async fn test_request() -> Result<()> {
     dotenvy::dotenv().unwrap();
 
     // task setup
-    let difficulty = 1;
-    let num_gens = 1;
-    let num_vals = 1;
+    let (difficulty, num_gens, num_vals) = (1, 1, 1);
     let protocol = format!("test/{}", env!("CARGO_PKG_VERSION"));
     let models = vec![Model::GPT4Turbo];
     let input = "What is the result of 2 + 2?".to_string();

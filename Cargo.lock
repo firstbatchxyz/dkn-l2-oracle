@@ -1877,7 +1877,7 @@ dependencies = [
 
 [[package]]
 name = "dkn-oracle"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "alloy",
  "alloy-chains",
