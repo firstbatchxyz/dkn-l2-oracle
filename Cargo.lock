@@ -1904,8 +1904,8 @@ dependencies = [
 
 [[package]]
 name = "dkn-workflows"
-version = "0.1.0"
-source = "git+https://github.com/firstbatchxyz/dkn-compute-node?branch=erhant/subcrates#a417b7bf99cec356004621c1ff2e7401c6de6552"
+version = "0.2.11"
+source = "git+https://github.com/firstbatchxyz/dkn-compute-node#1abbc364e1225eca5f690e961e0e89cfc21856be"
 dependencies = [
  "async-trait",
  "eyre",

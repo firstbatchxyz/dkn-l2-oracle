@@ -18,7 +18,7 @@ async fn test_oracle() -> Result<()> {
     println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
-    let model_config = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);
+    let workflows = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::anvil_new(config).await?;
 
@@ -68,7 +68,7 @@ async fn test_oracle() -> Result<()> {
     assert_eq!(event.statusBefore, TaskStatus::None as u8);
     assert_eq!(event.statusAfter, TaskStatus::PendingGeneration as u8);
     let generation_receipt =
-        handle_request(&generator, &[OracleKind::Generator], &model_config, event)
+        handle_request(&generator, &[OracleKind::Generator], &workflows, event)
             .await?
             .unwrap();
 
@@ -85,7 +85,7 @@ async fn test_oracle() -> Result<()> {
     assert_eq!(event.statusBefore, TaskStatus::PendingGeneration as u8);
     assert_eq!(event.statusAfter, TaskStatus::PendingValidation as u8);
     let validation_receipt =
-        handle_request(&validator, &[OracleKind::Validator], &model_config, event)
+        handle_request(&validator, &[OracleKind::Validator], &workflows, event)
             .await?
             .unwrap();
 

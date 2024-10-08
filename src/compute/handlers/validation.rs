@@ -10,7 +10,7 @@ use eyre::{eyre, Context, Result};
 #[allow(unused)]
 pub async fn handle_validation(
     node: &DriaOracle,
-    models: &DriaWorkflowsConfig,
+    workflows: &DriaWorkflowsConfig,
     task_id: U256,
 ) -> Result<Option<TransactionReceipt>> {
     log::info!("Handling validation task {}", task_id);

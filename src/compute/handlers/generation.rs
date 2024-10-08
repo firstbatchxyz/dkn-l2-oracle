@@ -19,7 +19,7 @@ use eyre::{Context, Result};
 /// 2. Then, we check if our models are compatible with the request. If not, we return an error.
 pub async fn handle_generation(
     node: &DriaOracle,
-    models: &DriaWorkflowsConfig,
+    workflows: &DriaWorkflowsConfig,
     task_id: U256,
     protocol: FixedBytes<32>,
 ) -> Result<Option<TransactionReceipt>> {
@@ -44,7 +44,7 @@ pub async fn handle_generation(
     log::debug!("Choosing model to use");
     let models_string = bytes_to_string(&request.models)?;
     let models_vec = models_string.split(',').map(|s| s.to_string()).collect();
-    let (_, model) = models.get_any_matching_model(models_vec)?;
+    let (_, model) = workflows.get_any_matching_model(models_vec)?;
     log::debug!("Using model: {} from {}", model, models_string);
 
     // execute task
