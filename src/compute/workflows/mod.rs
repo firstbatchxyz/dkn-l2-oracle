@@ -7,7 +7,7 @@ mod postprocess;
 mod tests {
     use super::*;
     use alloy::primitives::Bytes;
-    use dkn_workflows::ollama_workflows::{Entry, Executor, Model, ProgramMemory};
+    use dkn_workflows::{Entry, Executor, Model, ProgramMemory};
 
     #[tokio::test]
     #[ignore = "run this manually"]

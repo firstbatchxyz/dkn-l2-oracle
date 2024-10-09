@@ -8,7 +8,7 @@ use alloy::{
     primitives::{FixedBytes, U256},
     rpc::types::TransactionReceipt,
 };
-use dkn_workflows::{ollama_workflows::Executor, DriaWorkflowsConfig};
+use dkn_workflows::{DriaWorkflowsConfig, Executor};
 use eyre::{Context, Result};
 
 /// Handles a generation request.

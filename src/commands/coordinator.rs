@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     compute::handle_request,
     contracts::{bytes_to_string, string_to_bytes, OracleKind, TaskStatus},
@@ -39,6 +41,12 @@ pub async fn run_oracle(
     if model_config.models.is_empty() {
         return Err(eyre!("No models provided."))?;
     }
+    let ollama_config = model_config.ollama.clone();
+    model_config = model_config.with_ollama_config(
+        ollama_config
+            .with_min_tps(5.0)
+            .with_timeout(Duration::from_secs(150)),
+    );
     model_config.check_services().await?;
 
     // check previous tasks

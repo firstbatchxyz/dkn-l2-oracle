@@ -1,6 +1,6 @@
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use dkn_workflows::ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
+use dkn_workflows::{Entry, Executor, ProgramMemory, Workflow};
 use eyre::{Context, Result};
 
 use super::postprocess::*;
