@@ -1,5 +1,7 @@
+use std::time::Duration;
+
 use crate::{
-    compute::{handle_request, ModelConfig},
+    compute::handle_request,
     contracts::{bytes_to_string, string_to_bytes, OracleKind, TaskStatus},
     DriaOracle,
 };
@@ -7,9 +9,9 @@ use alloy::{
     eips::BlockNumberOrTag,
     primitives::{utils::format_ether, U256},
 };
+use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
-use ollama_workflows::Model;
 
 /// Runs the main loop of the oracle node.
 pub async fn run_oracle(
@@ -35,11 +37,17 @@ pub async fn run_oracle(
     }
 
     // prepare model config
-    let model_config = ModelConfig::new(models);
-    if model_config.models_providers.is_empty() {
+    let mut model_config = DriaWorkflowsConfig::new(models);
+    if model_config.models.is_empty() {
         return Err(eyre!("No models provided."))?;
     }
-    model_config.check_providers().await?;
+    let ollama_config = model_config.ollama.clone();
+    model_config = model_config.with_ollama_config(
+        ollama_config
+            .with_min_tps(5.0)
+            .with_timeout(Duration::from_secs(150)),
+    );
+    model_config.check_services().await?;
 
     // check previous tasks
     if from_block.clone().into() != BlockNumberOrTag::Latest {

@@ -1,16 +1,16 @@
-use super::ModelConfig;
 use crate::{mine_nonce, DriaOracle};
 use alloy::{
     primitives::{utils::parse_ether, Bytes, U256},
     rpc::types::TransactionReceipt,
 };
+use dkn_workflows::DriaWorkflowsConfig;
 use eyre::{eyre, Context, Result};
 
 /// Handles a validation request.
 #[allow(unused)]
 pub async fn handle_validation(
     node: &DriaOracle,
-    models: &ModelConfig,
+    workflows: &DriaWorkflowsConfig,
     task_id: U256,
 ) -> Result<Option<TransactionReceipt>> {
     log::info!("Handling validation task {}", task_id);

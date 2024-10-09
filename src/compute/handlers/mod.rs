@@ -1,9 +1,9 @@
-use super::ModelConfig;
 use crate::{
     contracts::{OracleCoordinator::StatusUpdate, OracleKind, TaskStatus},
     DriaOracle,
 };
 use alloy::rpc::types::TransactionReceipt;
+use dkn_workflows::DriaWorkflowsConfig;
 use eyre::Result;
 
 mod generation;
@@ -21,7 +21,7 @@ use validation::*;
 pub async fn handle_request(
     node: &DriaOracle,
     kinds: &[OracleKind],
-    model_config: &ModelConfig,
+    workflows: &DriaWorkflowsConfig,
     event: StatusUpdate,
 ) -> Result<Option<TransactionReceipt>> {
     log::debug!("Received event for task {} ()", event.taskId);
@@ -29,7 +29,7 @@ pub async fn handle_request(
     let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
             if kinds.contains(&OracleKind::Generator) {
-                handle_generation(node, model_config, event.taskId, event.protocol).await?
+                handle_generation(node, workflows, event.taskId, event.protocol).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not generator.",
@@ -40,7 +40,7 @@ pub async fn handle_request(
         }
         TaskStatus::PendingValidation => {
             if kinds.contains(&OracleKind::Validator) {
-                handle_validation(node, model_config, event.taskId).await?
+                handle_validation(node, workflows, event.taskId).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not validator.",

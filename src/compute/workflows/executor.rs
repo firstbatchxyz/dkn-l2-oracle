@@ -1,7 +1,7 @@
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
+use dkn_workflows::{Entry, Executor, ProgramMemory, Workflow};
 use eyre::{Context, Result};
-use ollama_workflows::{Entry, Executor, ProgramMemory, Workflow};
 
 use super::postprocess::*;
 use crate::data::{Arweave, OracleExternalData};

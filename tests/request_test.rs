@@ -6,17 +6,15 @@
 
 use alloy::primitives::utils::parse_ether;
 use dkn_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
+use dkn_workflows::Model;
 use eyre::Result;
-use ollama_workflows::Model;
 
 #[tokio::test]
 async fn test_request() -> Result<()> {
     dotenvy::dotenv().unwrap();
 
     // task setup
-    let difficulty = 1;
-    let num_gens = 1;
-    let num_vals = 1;
+    let (difficulty, num_gens, num_vals) = (1, 1, 1);
     let protocol = format!("test/{}", env!("CARGO_PKG_VERSION"));
     let models = vec![Model::GPT4Turbo];
     let input = "What is the result of 2 + 2?".to_string();

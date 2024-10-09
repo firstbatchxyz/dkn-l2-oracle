@@ -2,14 +2,14 @@ use crate::{
     compute::WorkflowsExt,
     contracts::{bytes32_to_string, bytes_to_string},
     data::Arweave,
-    mine_nonce, DriaOracle, ModelConfig,
+    mine_nonce, DriaOracle,
 };
 use alloy::{
     primitives::{FixedBytes, U256},
     rpc::types::TransactionReceipt,
 };
+use dkn_workflows::{DriaWorkflowsConfig, Executor};
 use eyre::{Context, Result};
-use ollama_workflows::Executor;
 
 /// Handles a generation request.
 ///
@@ -19,7 +19,7 @@ use ollama_workflows::Executor;
 /// 2. Then, we check if our models are compatible with the request. If not, we return an error.
 pub async fn handle_generation(
     node: &DriaOracle,
-    models: &ModelConfig,
+    workflows: &DriaWorkflowsConfig,
     task_id: U256,
     protocol: FixedBytes<32>,
 ) -> Result<Option<TransactionReceipt>> {
@@ -43,7 +43,8 @@ pub async fn handle_generation(
     // choose model based on the request
     log::debug!("Choosing model to use");
     let models_string = bytes_to_string(&request.models)?;
-    let (_, model) = models.get_any_matching_model_from_csv(&models_string)?;
+    let models_vec = models_string.split(',').map(|s| s.to_string()).collect();
+    let (_, model) = workflows.get_any_matching_model(models_vec)?;
     log::debug!("Using model: {} from {}", model, models_string);
 
     // execute task

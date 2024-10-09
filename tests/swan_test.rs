@@ -5,10 +5,10 @@ use alloy::{
 };
 use dkn_oracle::{
     bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
-    ModelConfig, OracleKind, TaskStatus, WETH,
+    OracleKind, TaskStatus, WETH,
 };
+use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::Result;
-use ollama_workflows::Model;
 
 // TODO: move this to Swan post-process file
 
@@ -36,7 +36,7 @@ async fn test_swan() -> Result<()> {
     println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
-    let model_config = ModelConfig::new(vec![Model::GPT4Turbo]);
+    let workflows = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);
     let config = DriaOracleConfig::new_from_env()?;
     let (node, _anvil) = DriaOracle::anvil_new(config).await?;
 
@@ -86,7 +86,7 @@ async fn test_swan() -> Result<()> {
     assert_eq!(event.statusBefore, TaskStatus::None as u8);
     assert_eq!(event.statusAfter, TaskStatus::PendingGeneration as u8);
     let generation_receipt =
-        handle_request(&generator, &[OracleKind::Generator], &model_config, event)
+        handle_request(&generator, &[OracleKind::Generator], &workflows, event)
             .await?
             .unwrap();
 
@@ -103,7 +103,7 @@ async fn test_swan() -> Result<()> {
     assert_eq!(event.statusBefore, TaskStatus::PendingGeneration as u8);
     assert_eq!(event.statusAfter, TaskStatus::PendingValidation as u8);
     let validation_receipt =
-        handle_request(&validator, &[OracleKind::Validator], &model_config, event)
+        handle_request(&validator, &[OracleKind::Validator], &workflows, event)
             .await?
             .unwrap();
 
