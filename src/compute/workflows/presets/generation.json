@@ -2,7 +2,7 @@
   "name": "LLM generation",
   "description": "Directly generate text with input",
   "config": {
-    "max_steps": 1,
+    "max_steps": 10,
     "max_time": 50,
     "tools": [""]
   },

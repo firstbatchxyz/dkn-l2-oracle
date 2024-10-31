@@ -28,7 +28,7 @@ impl SwanPurchasePostProcessor {
 impl PostProcess for SwanPurchasePostProcessor {
     const PROTOCOL: &'static str = "swan-buyer-purchase";
 
-    fn post_process(&self, input: String) -> Result<(Bytes, Bytes)> {
+    fn post_process(&self, input: String) -> Result<(Bytes, Bytes, bool)> {
         // we will cast strings to Address here
         use alloy::primitives::Address;
 
@@ -58,7 +58,7 @@ impl PostProcess for SwanPurchasePostProcessor {
         // `abi.encode` the list of addresses to be decodable by contract
         let addresses_encoded = addresses.abi_encode();
 
-        Ok((Bytes::from(addresses_encoded), Bytes::from(input)))
+        Ok((Bytes::from(addresses_encoded), Bytes::from(input), false))
     }
 }
 
@@ -85,7 +85,7 @@ some more blabla here
 
         let post_processor = SwanPurchasePostProcessor::new("<buy_list>", "</buy_list>");
 
-        let (output, metadata) = post_processor.post_process(INPUT.to_string()).unwrap();
+        let (output, metadata, _) = post_processor.post_process(INPUT.to_string()).unwrap();
         assert_eq!(
             metadata,
             Bytes::from(INPUT),
@@ -121,7 +121,7 @@ some more blabla here
 
         let post_processor = SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>");
 
-        let (output, _) = post_processor.post_process(INPUT.to_string()).unwrap();
+        let (output, _, _) = post_processor.post_process(INPUT.to_string()).unwrap();
         println!("{}", output);
 
         let addresses = <Vec<Address>>::abi_decode(&output, true).unwrap();

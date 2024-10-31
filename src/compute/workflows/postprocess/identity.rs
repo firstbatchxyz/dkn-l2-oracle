@@ -11,8 +11,8 @@ pub struct IdentityPostProcessor;
 impl PostProcess for IdentityPostProcessor {
     const PROTOCOL: &'static str = "";
 
-    fn post_process(&self, input: String) -> Result<(Bytes, Bytes)> {
-        Ok((input.into(), Default::default()))
+    fn post_process(&self, input: String) -> Result<(Bytes, Bytes, bool)> {
+        Ok((input.into(), Default::default(), true))
     }
 }
 
@@ -23,7 +23,7 @@ mod tests {
     #[test]
     fn test_identity_post_processor() {
         let input = "hello".to_string();
-        let (output, metadata) = IdentityPostProcessor.post_process(input).unwrap();
+        let (output, metadata, _) = IdentityPostProcessor.post_process(input).unwrap();
         assert_eq!(output, Bytes::from("hello"));
         assert_eq!(metadata, Bytes::default());
     }

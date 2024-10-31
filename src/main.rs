@@ -10,5 +10,6 @@ async fn main() -> Result<()> {
 
     dkn_oracle::cli().await?;
 
+    log::info!("Bye!");
     Ok(())
 }
