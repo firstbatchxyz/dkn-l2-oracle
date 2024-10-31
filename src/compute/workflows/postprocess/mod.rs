@@ -14,5 +14,10 @@ pub trait PostProcess {
     const PROTOCOL: &'static str;
 
     /// A post-processing step that takes the raw output from the LLM and splits it into an output and metadata.
-    fn post_process(&self, input: String) -> eyre::Result<(Bytes, Bytes)>;
+    ///
+    /// Returns:
+    /// - The output that is used within the contract.
+    /// - The metadata that is externally checked.
+    /// - A boolean indicating if the output should be uploaded to a storage if large enough.
+    fn post_process(&self, input: String) -> eyre::Result<(Bytes, Bytes, bool)>;
 }

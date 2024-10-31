@@ -14,7 +14,7 @@ mod tests {
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
-        let (output, _) = executor
+        let (output, _, _) = executor
             .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
             .await
             .unwrap();
@@ -29,7 +29,7 @@ mod tests {
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
         let executor = Executor::new(Model::Llama3_1_8B);
-        let (output, _) = executor
+        let (output, _, _) = executor
             .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
             .await
             .unwrap();

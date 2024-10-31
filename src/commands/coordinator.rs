@@ -27,6 +27,10 @@ pub async fn run_oracle(
                 kinds.push(kind);
             }
         }
+
+        if kinds.is_empty() {
+            return Err(eyre!("You are not registered as any type of oracle."))?;
+        }
     } else {
         // otherwise, make sure we are registered to required kinds
         for kind in &kinds {
