@@ -1,4 +1,4 @@
 mod chat;
 mod input;
-pub use input::{parse_input_bytes, InputType};
+pub use input::InputType;
 mod postprocess;

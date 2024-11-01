@@ -1,6 +1,7 @@
 use crate::{
-    compute::parse_input_bytes,
+    compute::InputType,
     contracts::{bytes32_to_string, bytes_to_string},
+    data::Arweave,
     mine_nonce, DriaOracle,
 };
 use alloy::{
@@ -49,9 +50,23 @@ pub async fn handle_generation(
     // execute task
     log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
-    let input = parse_input_bytes(&request.input).await?;
-    let (output, metadata) = input.execute(model, protocol_string).await?;
+    let input = InputType::try_parse_bytes(&request.input).await?;
+    let output = input.execute(model).await?;
     log::debug!("Output: {}", output);
+
+    // post-processing
+    log::debug!("Post-processing the output");
+    let (output, metadata, use_storage) = InputType::post_process(output, &protocol_string).await?;
+
+    // uploading to storage
+    log::debug!("Uploading output to storage");
+    let arweave = Arweave::new_from_env()?;
+    let output = if use_storage {
+        arweave.put_if_large(output).await?
+    } else {
+        output
+    };
+    let metadata = arweave.put_if_large(metadata).await?;
 
     // mine nonce
     log::debug!("Mining nonce for task");

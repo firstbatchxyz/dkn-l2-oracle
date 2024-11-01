@@ -17,76 +17,68 @@ pub fn generation_workflow() -> Result<Workflow> {
         .wrap_err("could not parse workflow")
 }
 
+#[derive(Debug)]
 pub enum InputType {
     ChatHistory(ChatHistoryRequest),
     Workflow(Workflow),
-    Plaintext(String),
+    String(String),
 }
 
 impl InputType {
-    pub async fn execute(self, model: Model, protocol: String) -> Result<(Bytes, Bytes)> {
-        log::debug!("Executing workflow with: {}", model);
-        let mut memory = ProgramMemory::new();
-        let executor = Executor::new(model);
-        let output = match self {
-            Self::Workflow(workflow) => executor.execute(None, workflow, &mut memory).await,
-            Self::Plaintext(input) => {
-                let workflow = generation_workflow()?;
-                let entry = Entry::String(input.clone());
-                executor.execute(Some(&entry), workflow, &mut memory).await
-            }
-            _ => todo!("todotodo"), // FIXME: add chat history here
-        }?;
-        log::debug!("Output: {}", output);
-
-        // post-process output w.r.t protocol
-        log::debug!("Applying post-processing for protocol: {}", protocol);
-        let (output, metadata, use_storage) = match protocol.split('/').next().unwrap_or_default() {
+    pub async fn post_process(output: String, protocol: &str) -> Result<(Bytes, Bytes, bool)> {
+        match protocol.split('/').next().unwrap_or_default() {
             SwanPurchasePostProcessor::PROTOCOL => {
                 SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
             }
             _ => IdentityPostProcessor.post_process(output),
-        }?;
+        }
+    }
 
-        // do the Arweave trick for large inputs
-        log::debug!("Uploading to Arweave if required");
-        let arweave = Arweave::new_from_env().wrap_err("could not create Arweave instance")?;
-        let output = if use_storage {
-            arweave.put_if_large(output).await?
+    pub async fn execute(&self, model: Model) -> Result<String> {
+        log::debug!("Executing workflow with: {}", model);
+        let mut memory = ProgramMemory::new();
+        let executor = Executor::new(model);
+
+        match self {
+            Self::Workflow(workflow) => executor.execute(None, workflow, &mut memory).await,
+            Self::String(input) => {
+                // TODO: can use `lazy_static` for this guy
+                let workflow = generation_workflow()?;
+                let entry = Entry::String(input.clone());
+                executor.execute(Some(&entry), &workflow, &mut memory).await
+            }
+            Self::ChatHistory(chat_history) => {
+                todo!("TODO: history execution will be implemented")
+            }
+        }
+        .wrap_err("could not execute workflow")
+    }
+
+    /// Given an input of byte-slice, parses it into a valid input type.
+    pub async fn try_parse_bytes(input_bytes: &Bytes) -> Result<Self> {
+        // first, convert to string
+        let mut input_string = bytes_to_string(input_bytes)?;
+
+        // then, check storage
+        if Arweave::is_key(input_string.clone()) {
+            // if its a txid, we download the data and parse it again
+            let input_bytes_from_arweave = Arweave::default()
+                .get(input_string)
+                .await
+                .wrap_err("could not download from Arweave")?;
+
+            // convert the input to string
+            input_string = bytes_to_string(&input_bytes_from_arweave)?;
+        }
+
+        // parse input again
+        if let Ok(chat_input) = serde_json::from_str::<ChatHistoryRequest>(&input_string) {
+            Ok(InputType::ChatHistory(chat_input))
+        } else if let Ok(workflow) = serde_json::from_str::<Workflow>(&input_string) {
+            Ok(InputType::Workflow(workflow))
         } else {
-            output
-        };
-        let metadata = arweave.put_if_large(metadata).await?;
-
-        Ok((output, metadata))
-    }
-}
-
-/// Given an input of byte-slice, parses it into a valid input type.
-/// TODO: can be try-from
-pub async fn parse_input_bytes(input_bytes: &Bytes) -> Result<InputType> {
-    // first, convert to string
-    let mut input_string = bytes_to_string(input_bytes)?;
-
-    // then, check storage
-    if Arweave::is_key(input_string.clone()) {
-        // if its a txid, we download the data and parse it again
-        let input_bytes_from_arweave = Arweave::default()
-            .get(input_string)
-            .await
-            .wrap_err("could not download from Arweave")?;
-
-        // convert the input to string
-        input_string = bytes_to_string(&input_bytes_from_arweave)?;
-    }
-
-    // parse input again
-    if let Ok(chat_input) = serde_json::from_str::<ChatHistoryRequest>(&input_string) {
-        Ok(InputType::ChatHistory(chat_input))
-    } else if let Ok(workflow) = serde_json::from_str::<Workflow>(&input_string) {
-        Ok(InputType::Workflow(workflow))
-    } else {
-        Ok(InputType::Plaintext(input_string))
+            Ok(InputType::String(input_string))
+        }
     }
 }
 
@@ -97,34 +89,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_input_string() {
-        let executor = Executor::new(Default::default());
         let input_str = "foobar";
-
-        let (entry, _) = executor
-            .parse_input_bytes(&input_str.as_bytes().into())
-            .await
-            .unwrap();
-        assert_eq!(entry.unwrap(), Entry::String(input_str.into()));
+        let entry = InputType::try_parse_bytes(&input_str.as_bytes().into()).await;
+        assert_eq!(entry.unwrap(), InputType::String(input_str.into()));
     }
 
     #[tokio::test]
     async fn test_parse_input_arweave() {
-        let executor = Executor::new(Default::default());
-
+        // contains the string: "\"Hello, Arweave!\""
         // hex for: Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
-        // contains the string: "\"Hello, Arweave!\"" which will be parsed again within
-        let arweave_key = "\"660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0\"";
-        let expected_str = "Hello, Arweave!";
+        let arweave_key = "660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0";
+        let expected_str = "\"Hello, Arweave!\"";
 
         let (entry, _) = executor
             .parse_input_bytes(&arweave_key.as_bytes().into())
-            .await
-            .unwrap();
-        assert_eq!(entry.unwrap(), Entry::String(expected_str.into()));
-
-        // without `"`s
-        let (entry, _) = executor
-            .parse_input_bytes(&arweave_key.trim_matches('"').as_bytes().into())
             .await
             .unwrap();
         assert_eq!(entry.unwrap(), Entry::String(expected_str.into()));
