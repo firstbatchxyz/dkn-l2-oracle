@@ -1,14 +1,13 @@
 use crate::{
-    compute::WorkflowsExt,
+    compute::parse_input_bytes,
     contracts::{bytes32_to_string, bytes_to_string},
-    data::Arweave,
     mine_nonce, DriaOracle,
 };
 use alloy::{
     primitives::{FixedBytes, U256},
     rpc::types::TransactionReceipt,
 };
-use dkn_workflows::{DriaWorkflowsConfig, Executor};
+use dkn_workflows::DriaWorkflowsConfig;
 use eyre::{Context, Result};
 
 /// Handles a generation request.
@@ -50,20 +49,9 @@ pub async fn handle_generation(
     // execute task
     log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
-    let executor = Executor::new(model);
-    let (output, metadata, use_storage) = executor
-        .execute_raw(&request.input, &protocol_string)
-        .await?;
-
-    // do the Arweave trick for large inputs
-    log::debug!("Uploading to Arweave if required");
-    let arweave = Arweave::new_from_env().wrap_err("could not create Arweave instance")?;
-    let output = if use_storage {
-        arweave.put_if_large(output).await?
-    } else {
-        output
-    };
-    let metadata = arweave.put_if_large(metadata).await?;
+    let input = parse_input_bytes(&request.input).await?;
+    let (output, metadata) = input.execute(model, protocol_string).await?;
+    log::debug!("Output: {}", output);
 
     // mine nonce
     log::debug!("Mining nonce for task");
