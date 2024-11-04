@@ -1,4 +1,4 @@
 mod chat;
 mod input;
-pub use input::InputType;
+pub use input::RequestType;
 mod postprocess;

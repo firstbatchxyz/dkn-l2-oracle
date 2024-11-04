@@ -1,5 +1,5 @@
 use crate::{
-    compute::InputType,
+    compute::RequestType,
     contracts::{bytes32_to_string, bytes_to_string},
     data::Arweave,
     mine_nonce, DriaOracle,
@@ -50,13 +50,14 @@ pub async fn handle_generation(
     // execute task
     log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
-    let input = InputType::try_parse_bytes(&request.input).await?;
-    let output = input.execute(model).await?;
+    let input = RequestType::try_parse_bytes(&request.input).await?;
+    let output = input.execute(model, Some(node)).await?;
     log::debug!("Output: {}", output);
 
     // post-processing
     log::debug!("Post-processing the output");
-    let (output, metadata, use_storage) = InputType::post_process(output, &protocol_string).await?;
+    let (output, metadata, use_storage) =
+        RequestType::post_process(output, &protocol_string).await?;
 
     // uploading to storage
     log::debug!("Uploading output to storage");

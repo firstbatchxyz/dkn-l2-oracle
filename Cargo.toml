@@ -36,7 +36,8 @@ bytes = "1.7.1"
 rand = "0.8.5"
 reqwest = "0.12.5"
 
-# hex, serde
+# b64, hex, serde
+base64 = "0.22.1"
 hex = "0.4.3"
 hex-literal = "0.4.1"
 serde = "1.0.204"
@@ -49,4 +50,3 @@ clap = { version = "4.5.13", features = ["derive", "env"] }
 # there are many unused stuff here, but everything breaks if you use the minimal set
 # because Bundlr SDK is not maintained at all
 bundlr-sdk = { version = "0.5.0" }
-base64 = "0.22.1"

@@ -7,8 +7,24 @@ pub struct ChatHistoryResponse {
     pub role: String,
     /// Message content.
     pub content: String,
-    /// Task Id of this entry.
-    pub id: usize,
+}
+
+impl ChatHistoryResponse {
+    /// Creates a new chat history entry with the given content for `assistant` role.
+    pub fn assistant(content: String) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+        }
+    }
+
+    /// Creates a new chat history entry with the given content for `user` role.
+    pub fn user(content: String) -> Self {
+        Self {
+            role: "user".to_string(),
+            content,
+        }
+    }
 }
 
 /// A request with chat history.

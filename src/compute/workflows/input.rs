@@ -1,30 +1,97 @@
-use alloy::primitives::Bytes;
+use alloy::primitives::{Bytes, U256};
 use dkn_workflows::{Entry, Executor, Model, ProgramMemory, Workflow};
-use eyre::{Context, Result};
+use eyre::{eyre, Context, Result};
+use lazy_static::lazy_static;
 
-use super::{chat::ChatHistoryRequest, postprocess::*};
+use super::{chat::*, postprocess::*};
 use crate::{
     bytes_to_string,
     data::{Arweave, OracleExternalData},
+    DriaOracle,
 };
 
-/// Returns a generation workflow for the executor.
-///
-/// This should be used when the input is simple a string.
-#[inline]
-pub fn generation_workflow() -> Result<Workflow> {
-    serde_json::from_str(include_str!("presets/generation.json"))
-        .wrap_err("could not parse workflow")
+lazy_static! {
+    static ref GENERATION_WORKFLOW: Workflow = {
+        serde_json::from_str(include_str!("presets/generation.json"))
+            .expect("could not parse generation workflow")
+    };
 }
 
 #[derive(Debug)]
-pub enum InputType {
+pub enum RequestType {
     ChatHistory(ChatHistoryRequest),
     Workflow(Workflow),
     String(String),
 }
 
-impl InputType {
+impl RequestType {
+    /// Given an input of byte-slice, parses it into a valid request type.
+    pub async fn try_parse_bytes(input_bytes: &Bytes) -> Result<Self> {
+        let input_string = Self::parse_downloadable(input_bytes).await?;
+        if let Ok(chat_input) = serde_json::from_str::<ChatHistoryRequest>(&input_string) {
+            Ok(RequestType::ChatHistory(chat_input))
+        } else if let Ok(workflow) = serde_json::from_str::<Workflow>(&input_string) {
+            Ok(RequestType::Workflow(workflow))
+        } else {
+            Ok(RequestType::String(input_string))
+        }
+    }
+
+    /// Executes a request using the given model, and optionally a node.
+    /// Returns the raw string output.
+    pub async fn execute(&self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
+        log::debug!("Executing workflow with: {}", model);
+        let mut memory = ProgramMemory::new();
+        let executor = Executor::new(model);
+
+        match self {
+            Self::Workflow(workflow) => executor
+                .execute(None, workflow, &mut memory)
+                .await
+                .wrap_err("could not execute worfklow input"),
+            Self::String(input) => {
+                let entry = Entry::String(input.clone());
+                executor
+                    .execute(Some(&entry), &GENERATION_WORKFLOW, &mut memory)
+                    .await
+                    .wrap_err("could not execute worfklow for string input")
+            }
+            Self::ChatHistory(chat_history) => {
+                if let Some(node) = node {
+                    // get history from blockchain
+                    let history_task = node
+                        .get_task_best_response(U256::from(chat_history.history_id))
+                        .await?;
+
+                    // parse it as chat history output
+                    let history_str = Self::parse_downloadable(&history_task.output).await?;
+                    let mut history =
+                        serde_json::from_str::<Vec<ChatHistoryResponse>>(&history_str)?;
+
+                    // execute the workflow
+                    // TODO: add chat history to memory
+                    let entry = Entry::String(chat_history.content.clone());
+                    let output = executor
+                        .execute(Some(&entry), &GENERATION_WORKFLOW, &mut memory)
+                        .await
+                        .wrap_err("could not execute chat worfklow")?;
+
+                    // append user input & workflow output to chat history
+                    history.push(ChatHistoryResponse::user(chat_history.content.clone()));
+                    history.push(ChatHistoryResponse::assistant(output));
+
+                    // return the stringified output
+                    let out = serde_json::to_string(&history)
+                        .wrap_err("could not serialize chat history")?;
+
+                    Ok(out)
+                } else {
+                    Err(eyre!("node is required for chat history"))
+                }
+            }
+        }
+    }
+
     pub async fn post_process(output: String, protocol: &str) -> Result<(Bytes, Bytes, bool)> {
         match protocol.split('/').next().unwrap_or_default() {
             SwanPurchasePostProcessor::PROTOCOL => {
@@ -34,28 +101,9 @@ impl InputType {
         }
     }
 
-    pub async fn execute(&self, model: Model) -> Result<String> {
-        log::debug!("Executing workflow with: {}", model);
-        let mut memory = ProgramMemory::new();
-        let executor = Executor::new(model);
-
-        match self {
-            Self::Workflow(workflow) => executor.execute(None, workflow, &mut memory).await,
-            Self::String(input) => {
-                // TODO: can use `lazy_static` for this guy
-                let workflow = generation_workflow()?;
-                let entry = Entry::String(input.clone());
-                executor.execute(Some(&entry), &workflow, &mut memory).await
-            }
-            Self::ChatHistory(chat_history) => {
-                todo!("TODO: history execution will be implemented")
-            }
-        }
-        .wrap_err("could not execute workflow")
-    }
-
-    /// Given an input of byte-slice, parses it into a valid input type.
-    pub async fn try_parse_bytes(input_bytes: &Bytes) -> Result<Self> {
+    /// Parses a given bytes input to a string, and if it is a storage key identifier it automatically
+    /// downloads the data from Arweave.
+    pub async fn parse_downloadable(input_bytes: &Bytes) -> Result<String> {
         // first, convert to string
         let mut input_string = bytes_to_string(input_bytes)?;
 
@@ -71,27 +119,32 @@ impl InputType {
             input_string = bytes_to_string(&input_bytes_from_arweave)?;
         }
 
-        // parse input again
-        if let Ok(chat_input) = serde_json::from_str::<ChatHistoryRequest>(&input_string) {
-            Ok(InputType::ChatHistory(chat_input))
-        } else if let Ok(workflow) = serde_json::from_str::<Workflow>(&input_string) {
-            Ok(InputType::Workflow(workflow))
-        } else {
-            Ok(InputType::String(input_string))
-        }
+        Ok(input_string)
     }
 }
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+
+    // only implemented for testing purposes
+    // because Workflow and ChatHistory do not implement PartialEq
+    impl PartialEq for RequestType {
+        fn eq(&self, other: &Self) -> bool {
+            match (self, other) {
+                (Self::ChatHistory(_), Self::ChatHistory(_)) => true,
+                (Self::Workflow(_), Self::Workflow(_)) => true,
+                (Self::String(a), Self::String(b)) => a == b,
+                _ => false,
+            }
+        }
+    }
 
     #[tokio::test]
     async fn test_parse_input_string() {
         let input_str = "foobar";
-        let entry = InputType::try_parse_bytes(&input_str.as_bytes().into()).await;
-        assert_eq!(entry.unwrap(), InputType::String(input_str.into()));
+        let entry = RequestType::try_parse_bytes(&input_str.as_bytes().into()).await;
+        assert_eq!(entry.unwrap(), RequestType::String(input_str.into()));
     }
 
     #[tokio::test]
@@ -101,69 +154,38 @@ mod tests {
         let arweave_key = "660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0";
         let expected_str = "\"Hello, Arweave!\"";
 
-        let (entry, _) = executor
-            .parse_input_bytes(&arweave_key.as_bytes().into())
-            .await
-            .unwrap();
-        assert_eq!(entry.unwrap(), Entry::String(expected_str.into()));
+        let entry = RequestType::try_parse_bytes(&arweave_key.as_bytes().into()).await;
+        assert_eq!(entry.unwrap(), RequestType::String(expected_str.into()));
     }
 
     #[tokio::test]
     async fn test_parse_input_workflow() {
-        let executor = Executor::new(Default::default());
-
         let workflow_str = include_str!("presets/generation.json");
-        let (entry, _) = executor
-            .parse_input_bytes(&workflow_str.as_bytes().into())
-            .await
-            .unwrap();
+        let expected_workflow = serde_json::from_str::<Workflow>(&workflow_str).unwrap();
 
-        // if Workflow was parsed correctly, entry should be None
-        assert!(entry.is_none());
+        let entry = RequestType::try_parse_bytes(&workflow_str.as_bytes().into()).await;
+        assert_eq!(entry.unwrap(), RequestType::Workflow(expected_workflow));
     }
 
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
-        let executor = Executor::new(Model::Llama3_1_8B);
-        let (output, _, _) = executor
-            .execute_raw(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
-            .await
-            .unwrap();
+        let input = RequestType::String("What is the result of 2 + 2?".to_string());
+        let output = input.execute(Model::Llama3_1_8B, None).await.unwrap();
 
-        // funny test but it should pass
         println!("Output:\n{}", output);
-        // assert!(output.contains('4')); // FIXME: make this use bytes
+        assert!(output.contains('4'));
     }
 
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
-        let executor = Executor::new(Model::Llama3_1_8B);
-        let (output, _, _) = executor
-            .ex(&Bytes::from_static(b"What is the result of 2 + 2?"), "")
-            .await
-            .unwrap();
+        let input = RequestType::String("What is the result of 2 + 2?".to_string());
+        let output = input.execute(Model::GPT4Turbo, None).await.unwrap();
 
-        // funny test but it should pass
         println!("Output:\n{}", output);
-        // assert!(output.contains('4')); // FIXME: make this use bytes
-    }
-
-    /// Test the generation workflow with a plain input.
-    #[tokio::test]
-    async fn test_workflow_plain() {
-        dotenvy::dotenv().unwrap();
-        let executor = Executor::new(Model::GPT4o);
-        let mut memory = ProgramMemory::new();
-        let workflow = executor.get_generation_workflow().unwrap();
-        let input = Entry::try_value_or_str("What is 2 + 2?");
-        let output = executor
-            .execute(Some(&input), workflow, &mut memory)
-            .await
-            .unwrap();
-        println!("Output:\n{}", output);
+        assert!(output.contains('4'));
     }
 }
