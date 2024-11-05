@@ -1,21 +1,16 @@
 use alloy::primitives::{Bytes, U256};
 use dkn_workflows::{Entry, Executor, Model, ProgramMemory, Workflow};
 use eyre::{eyre, Context, Result};
-use lazy_static::lazy_static;
 
-use super::{chat::*, postprocess::*};
+mod chat;
+use chat::*;
+
+use super::{postprocess::*, presets::GENERATION_WORKFLOW};
 use crate::{
     bytes_to_string,
     data::{Arweave, OracleExternalData},
     DriaOracle,
 };
-
-lazy_static! {
-    static ref GENERATION_WORKFLOW: Workflow = {
-        serde_json::from_str(include_str!("presets/generation.json"))
-            .expect("could not parse generation workflow")
-    };
-}
 
 /// An oracle request.
 #[derive(Debug)]
@@ -53,6 +48,7 @@ impl Request {
                 .execute(None, workflow, &mut memory)
                 .await
                 .wrap_err("could not execute worfklow input"),
+
             Self::String(input) => {
                 let entry = Entry::String(input.clone());
                 executor
@@ -60,6 +56,7 @@ impl Request {
                     .await
                     .wrap_err("could not execute worfklow for string input")
             }
+
             Self::ChatHistory(chat_history) => {
                 if let Some(node) = node {
                     // if task id is zero, there is no prior history
@@ -170,7 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_input_workflow() {
-        let workflow_str = include_str!("presets/generation.json");
+        let workflow_str = include_str!("../presets/generation.json");
         let expected_workflow = serde_json::from_str::<Workflow>(&workflow_str).unwrap();
 
         let entry = Request::try_parse_bytes(&workflow_str.as_bytes().into()).await;

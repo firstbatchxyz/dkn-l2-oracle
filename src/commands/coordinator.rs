@@ -92,12 +92,8 @@ pub async fn run_oracle(
     }
 
     // handle new tasks with subscription
-    let event_poller = node
-        .subscribe_to_tasks()
-        .await
-        .wrap_err("could not subscribe to tasks")?;
     log::info!(
-        "Subscribed to LLMOracleCoordinator ({}) as {}",
+        "Subscribing to LLMOracleCoordinator ({}) as {}",
         node.addresses.coordinator,
         kinds
             .iter()
@@ -105,7 +101,12 @@ pub async fn run_oracle(
             .collect::<Vec<String>>()
             .join(", ")
     );
+    let event_poller = node
+        .subscribe_to_tasks()
+        .await
+        .wrap_err("could not subscribe to tasks")?;
 
+    log::info!("Listening for events...");
     event_poller
         .into_stream()
         .for_each(|log| async {
