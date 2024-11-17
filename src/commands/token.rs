@@ -43,6 +43,7 @@ pub async fn claim_rewards(node: &DriaOracle) -> Result<()> {
         // transfer rewards
         node.transfer_from(node.addresses.coordinator, node.address(), allowance.amount)
             .await?;
+        log::info!("Rewards claimed: {}.", allowance);
     }
 
     Ok(())

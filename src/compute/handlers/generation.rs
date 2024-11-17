@@ -1,5 +1,5 @@
 use crate::{
-    compute::WorkflowsExt,
+    compute::Request,
     contracts::{bytes32_to_string, bytes_to_string},
     data::Arweave,
     mine_nonce, DriaOracle,
@@ -8,7 +8,7 @@ use alloy::{
     primitives::{FixedBytes, U256},
     rpc::types::TransactionReceipt,
 };
-use dkn_workflows::{DriaWorkflowsConfig, Executor};
+use dkn_workflows::DriaWorkflowsConfig;
 use eyre::{Context, Result};
 
 /// Handles a generation request.
@@ -50,14 +50,17 @@ pub async fn handle_generation(
     // execute task
     log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
-    let executor = Executor::new(model);
-    let (output, metadata, use_storage) = executor
-        .execute_raw(&request.input, &protocol_string)
-        .await?;
+    let mut input = Request::try_parse_bytes(&request.input).await?;
+    let output = input.execute(model, Some(node)).await?;
+    log::debug!("Output: {}", output);
 
-    // do the Arweave trick for large inputs
-    log::debug!("Uploading to Arweave if required");
-    let arweave = Arweave::new_from_env().wrap_err("could not create Arweave instance")?;
+    // post-processing
+    log::debug!("Post-processing the output");
+    let (output, metadata, use_storage) = Request::post_process(output, &protocol_string).await?;
+
+    // uploading to storage
+    log::debug!("Uploading output to storage");
+    let arweave = Arweave::new_from_env()?;
     let output = if use_storage {
         arweave.put_if_large(output).await?
     } else {

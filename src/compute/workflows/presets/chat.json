@@ -14,24 +14,10 @@
   "tasks": [
     {
       "id": "A",
-      "name": "Generate",
-      "description": "Executes a simple generation request",
-      "messages": [
-        {
-          "role": "user",
-          "content": "{{text}}"
-        }
-      ],
-      "inputs": [
-        {
-          "name": "text",
-          "value": {
-            "type": "input",
-            "key": ""
-          },
-          "required": true
-        }
-      ],
+      "name": "Generate with history",
+      "description": "Expects an array of messages for generation",
+      "messages": [],
+      "inputs": [],
       "operator": "generation",
       "outputs": [
         {

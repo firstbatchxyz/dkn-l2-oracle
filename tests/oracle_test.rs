@@ -15,7 +15,6 @@ async fn test_oracle() -> Result<()> {
     let models = string_to_bytes(Model::GPT4Turbo.to_string());
     let protocol = format!("test/{}", env!("CARGO_PKG_VERSION"));
     let input = string_to_bytes("What is the result of 2 + 2?".to_string());
-    println!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
     let workflows = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);

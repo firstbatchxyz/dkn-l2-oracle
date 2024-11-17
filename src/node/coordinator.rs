@@ -42,6 +42,15 @@ impl DriaOracle {
         Ok(receipt)
     }
 
+    /// Returns the best response to a given task request, as per their scores.
+    /// Note that this logic takes place at contract level, and will revert if the task is not completed.
+    pub async fn get_task_best_response(&self, task_id: U256) -> Result<TaskResponse> {
+        let coordinator = OracleCoordinator::new(self.addresses.coordinator, &self.provider);
+
+        let request = coordinator.getBestResponse(task_id).call().await?;
+        Ok(request._0)
+    }
+
     /// Returns the task request with the given id.
     pub async fn get_task_request(
         &self,
