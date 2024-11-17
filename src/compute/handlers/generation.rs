@@ -50,7 +50,7 @@ pub async fn handle_generation(
     // execute task
     log::debug!("Executing the workflow");
     let protocol_string = bytes32_to_string(&protocol)?;
-    let input = Request::try_parse_bytes(&request.input).await?;
+    let mut input = Request::try_parse_bytes(&request.input).await?;
     let output = input.execute(model, Some(node)).await?;
     log::debug!("Output: {}", output);
 

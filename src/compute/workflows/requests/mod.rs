@@ -1,16 +1,22 @@
 use alloy::primitives::{Bytes, U256};
-use dkn_workflows::{Entry, Executor, Model, ProgramMemory, Workflow};
+use dkn_workflows::{Entry, Executor, MessageInput, Model, ProgramMemory, Workflow};
 use eyre::{eyre, Context, Result};
 
-mod chat;
-use chat::*;
-
-use super::{postprocess::*, presets::GENERATION_WORKFLOW};
+use super::{postprocess::*, presets::*};
 use crate::{
     bytes_to_string,
     data::{Arweave, OracleExternalData},
     DriaOracle,
 };
+
+/// A request with chat history.
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct ChatHistoryRequest {
+    /// Task Id of which the output will act like history.
+    pub history_id: usize,
+    /// Message content.
+    pub content: String,
+}
 
 /// An oracle request.
 #[derive(Debug)]
@@ -38,7 +44,7 @@ impl Request {
 
     /// Executes a request using the given model, and optionally a node.
     /// Returns the raw string output.
-    pub async fn execute(&self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
+    pub async fn execute(&mut self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
         log::debug!("Executing workflow with: {}", model);
         let mut memory = ProgramMemory::new();
         let executor = Executor::new(model);
@@ -57,44 +63,53 @@ impl Request {
                     .wrap_err("could not execute worfklow for string input")
             }
 
-            Self::ChatHistory(chat_history) => {
-                if let Some(node) = node {
+            Self::ChatHistory(chat_request) => {
+                let mut history = if chat_request.history_id == 0 {
                     // if task id is zero, there is no prior history
-                    let mut history = if chat_history.history_id == 0 {
-                        Vec::new()
-                    } else {
-                        // get history from blockchain if requested
-                        let history_task = node
-                            .get_task_best_response(U256::from(chat_history.history_id))
-                            .await
-                            .wrap_err("could not get chat history task from contract")?;
-
-                        // parse it as chat history output
-                        let history_str = Self::parse_downloadable(&history_task.output).await?;
-
-                        serde_json::from_str::<Vec<ChatHistoryResponse>>(&history_str)?
-                    };
-
-                    // execute the workflow
-                    // TODO: add chat history to memory
-                    let entry = Entry::String(chat_history.content.clone());
-                    let output = executor
-                        .execute(Some(&entry), &GENERATION_WORKFLOW, &mut memory)
+                    Vec::new()
+                } else if let Some(node) = node {
+                    // if task id is non-zero, we need the node to get the history
+                    let history_task = node
+                        .get_task_best_response(U256::from(chat_request.history_id))
                         .await
-                        .wrap_err("could not execute chat worfklow")?;
+                        .wrap_err("could not get chat history task from contract")?;
 
-                    // append user input & workflow output to chat history
-                    history.push(ChatHistoryResponse::user(chat_history.content.clone()));
-                    history.push(ChatHistoryResponse::assistant(output));
+                    // parse it as chat history output
+                    let history_str = Self::parse_downloadable(&history_task.output).await?;
 
-                    // return the stringified output
-                    let out = serde_json::to_string(&history)
-                        .wrap_err("could not serialize chat history")?;
-
-                    Ok(out)
+                    serde_json::from_str::<Vec<MessageInput>>(&history_str)?
                 } else {
-                    Err(eyre!("node is required for chat history"))
-                }
+                    return Err(eyre!("node is required for chat history"));
+                };
+
+                // append user input to chat history
+                history.push(MessageInput {
+                    role: "user".to_string(),
+                    content: chat_request.content.clone(),
+                });
+
+                // prepare the workflow with chat history
+                let mut workflow = get_search_workflow();
+                let task = workflow.get_tasks_by_id_mut("A").unwrap();
+                task.messages = history.clone();
+
+                // call workflow
+                let output = executor
+                    .execute(None, &workflow, &mut memory)
+                    .await
+                    .wrap_err("could not execute chat worfklow")?;
+
+                // append user input to chat history
+                history.push(MessageInput {
+                    role: "assistant".to_string(),
+                    content: output,
+                });
+
+                // return the stringified output
+                let out =
+                    serde_json::to_string(&history).wrap_err("could not serialize chat history")?;
+
+                Ok(out)
             }
         }
     }
@@ -135,12 +150,14 @@ mod tests {
     use super::*;
 
     // only implemented for testing purposes
-    // because Workflow and ChatHistory do not implement PartialEq
+    // because `Workflow` does not implement `PartialEq`
     impl PartialEq for Request {
         fn eq(&self, other: &Self) -> bool {
             match (self, other) {
-                (Self::ChatHistory(_), Self::ChatHistory(_)) => true,
-                (Self::Workflow(_), Self::Workflow(_)) => true,
+                (Self::ChatHistory(a), Self::ChatHistory(b)) => {
+                    a.content == b.content && a.history_id == b.history_id
+                }
+                (Self::Workflow(_), Self::Workflow(_)) => true, // not implemented
                 (Self::String(a), Self::String(b)) => a == b,
                 _ => false,
             }
@@ -148,14 +165,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_input_string() {
-        let input_str = "foobar";
-        let entry = Request::try_parse_bytes(&input_str.as_bytes().into()).await;
-        assert_eq!(entry.unwrap(), Request::String(input_str.into()));
+    async fn test_parse_request_string() {
+        let request_str = "foobar";
+        let entry = Request::try_parse_bytes(&request_str.as_bytes().into()).await;
+        assert_eq!(entry.unwrap(), Request::String(request_str.into()));
     }
 
     #[tokio::test]
-    async fn test_parse_input_arweave() {
+    async fn test_parse_request_arweave() {
         // contains the string: "\"Hello, Arweave!\""
         // hex for: Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
         let arweave_key = "660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0";
@@ -166,7 +183,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_input_workflow() {
+    async fn test_parse_request_workflow() {
         let workflow_str = include_str!("../presets/generation.json");
         let expected_workflow = serde_json::from_str::<Workflow>(&workflow_str).unwrap();
 
@@ -175,22 +192,22 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_input_chat() {
-        let input = ChatHistoryRequest {
+    async fn test_parse_request_chat() {
+        let request = ChatHistoryRequest {
             history_id: 0,
             content: "foobar".to_string(),
         };
-        let input_bytes = serde_json::to_vec(&input).unwrap();
-        let entry = Request::try_parse_bytes(&input_bytes.into()).await;
-        assert_eq!(entry.unwrap(), Request::ChatHistory(input));
+        let request_bytes = serde_json::to_vec(&request).unwrap();
+        let entry = Request::try_parse_bytes(&request_bytes.into()).await;
+        assert_eq!(entry.unwrap(), Request::ChatHistory(request));
     }
 
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
-        let input = Request::String("What is the result of 2 + 2?".to_string());
-        let output = input.execute(Model::Llama3_1_8B, None).await.unwrap();
+        let mut request = Request::String("What is the result of 2 + 2?".to_string());
+        let output = request.execute(Model::Llama3_1_8B, None).await.unwrap();
 
         println!("Output:\n{}", output);
         assert!(output.contains('4'));
@@ -200,8 +217,26 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
-        let input = Request::String("What is the result of 2 + 2?".to_string());
-        let output = input.execute(Model::GPT4Turbo, None).await.unwrap();
+        let mut request = Request::String("What is the result of 2 + 2?".to_string());
+        let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
+
+        println!("Output:\n{}", output);
+        assert!(output.contains('4'));
+    }
+
+    #[tokio::test]
+    #[ignore = "run this manually"]
+    async fn test_openai_chat() {
+        dotenvy::dotenv().unwrap();
+        let request = ChatHistoryRequest {
+            history_id: 0,
+            content: "What is 2+2?".to_string(),
+        };
+        let request_bytes = serde_json::to_vec(&request).unwrap();
+        let mut request = Request::try_parse_bytes(&request_bytes.into())
+            .await
+            .unwrap();
+        let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
 
         println!("Output:\n{}", output);
         assert!(output.contains('4'));
