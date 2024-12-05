@@ -7,8 +7,15 @@ use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::Result;
 
 #[tokio::test]
-async fn test_oracle() -> Result<()> {
+async fn test_oracle_string_input() -> Result<()> {
     dotenvy::dotenv().unwrap();
+
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Off)
+        .filter_module("dkn_oracle", log::LevelFilter::Debug)
+        .filter_module("oracle_test", log::LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
 
     // task setup
     let difficulty = 1;
@@ -107,6 +114,7 @@ async fn test_oracle() -> Result<()> {
     let output_string = bytes_to_string(&response.output)?;
     assert!(output_string.contains("4"), "output must contain 4");
     assert!(!response.score.is_zero(), "score must be non-zero");
+    log::debug!("Output: {}", output_string);
 
     Ok(())
 }

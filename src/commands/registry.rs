@@ -2,7 +2,7 @@ use crate::{contracts::OracleKind, DriaOracle};
 use alloy::primitives::utils::format_ether;
 use eyre::Result;
 
-/// Registers the oracle node as an oracle for the given kind.
+/// Registers the oracle node as an oracle for the given `kind`.
 ///
 /// - If the node is already registered, it will do nothing.
 /// - If the node is not registered, it will approve the required amount of tokens
@@ -52,7 +52,7 @@ pub async fn register(node: &DriaOracle, kind: OracleKind) -> Result<()> {
     Ok(())
 }
 
-/// Unregisters the oracle node as an oracle for the given kind.
+/// Unregisters the oracle node as an oracle for the given `kind`.
 ///
 /// - If the node is not registered, it will do nothing.
 /// - If the node is registered, it will unregister the node and transfer all allowance
@@ -66,6 +66,7 @@ pub async fn unregister(node: &DriaOracle, kind: OracleKind) -> Result<()> {
         node.unregister(kind).await?;
 
         // transfer all allowance from registry back to oracle
+        // to get back the registrations fee
         let allowance = node
             .allowance(node.addresses.registry, node.address())
             .await?;

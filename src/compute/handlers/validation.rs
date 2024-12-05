@@ -33,11 +33,21 @@ pub async fn handle_validation(
         return Err(eyre!("Already validated {}", task_id));
     }
 
+    // fetch request and generations
     log::debug!("Fetching the task request");
     let request = node
         .get_task_request(task_id)
         .await
-        .wrap_err("could not get task")?;
+        .wrap_err("could not get task request")?;
+
+    // fetch each generation response & score it
+    // for i in 0..request.parameters.numGenerations {
+    //     // let response = node
+    //     //     .get_task_responses(task_id, i)
+    //     //     .await
+    //     //     .wrap_err("could not get generation")?;
+    //     let score = parse_ether("1.0").unwrap();
+    // }
 
     // FIXME: will add validation prompt here
     log::debug!("Validating the task");

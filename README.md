@@ -16,7 +16,7 @@
 Install Dria Oracle Node with:
 
 ```sh
-cargo install --git https://github.com/firstbatchxyz/dkn-l2-oracle
+cargo install --git https://github.com/firstbatchxyz/dria-oracle-node
 ```
 
 This will create a binary called `dkn-oracle`. You can see the available commands with:
@@ -77,7 +77,11 @@ If we provide no oracle types, it will default to the ones that we are registere
 dkn-oracle start -m=gpt-4o-mini -m=llama3.1:latest
 ```
 
-You can terminate the application from the terminal as usual (e.g. Control+C) to quit the node.
+You can terminate the application from the terminal as usual (e.g. CTRL+C) to quit the node.
+
+#### Using Arweave
+
+To save from gas fees, an Oracle node can upload its response to Arweave and then store the transaction id of that upload to the contract instead. This is differentiated by looking at the response, and see that it is exactly 64 characters
 
 ### Viewing Tasks
 
@@ -129,7 +133,7 @@ It mainly takes an input argument, followed by multiple model arguments:
 dkn-oracle request "What is 2+2?" gpt-4o-mini phi3:3.8b
 ```
 
-It also takes the following options:
+The `request` command takes the following options:
 
 - `--difficulty` for the proof-of-work difficulty for oracles that are responding to this request; the higher this is the more fees it will take to make the request.
 - `--num-gens` number of generations requested.
@@ -144,7 +148,7 @@ It also takes the following options:
 If you would like to contribute, please create an issue first! To start developing, clone the repository:
 
 ```sh
-git clone https://github.com/firstbatchxyz/dkn-compute-node.git
+git clone https://github.com/firstbatchxyz/dria-oracle-node.git
 ```
 
 ### Testing
