@@ -7,11 +7,11 @@ endif
 ###############################################################################
 .PHONY: launch #       | Run with INFO logging & release mode
 launch:
-		RUST_LOG=none,dkn_oracle=info,dkn_workflows=info cargo run --release start 
+		cargo run --release start 
 		
 .PHONY: run #          | Run with INFO logging
 run:
-		RUST_LOG=none,dkn_oracle=info,dkn_workflows=info cargo run start
+		cargo run start
 
 .PHONY: debug #        | Run with crate-level DEBUG logging & info-level workflows
 debug:

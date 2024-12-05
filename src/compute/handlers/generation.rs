@@ -13,8 +13,8 @@ use eyre::{Context, Result};
 
 /// Handles a generation request.
 ///
-/// 1. First, we check if we have already responded to the task. Contract will revert even if we dont do this check ourselves,
-///    but its better to provide the error here.
+/// 1. First, we check if we have already responded to the task.
+///    Contract will revert even if we dont do this check ourselves, but its better to provide the error here.
 ///
 /// 2. Then, we check if our models are compatible with the request. If not, we return an error.
 pub async fn handle_generation(
@@ -25,8 +25,8 @@ pub async fn handle_generation(
 ) -> Result<Option<TransactionReceipt>> {
     log::info!("Handling generation task {}", task_id);
 
-    // check if we have validated anyways
-    log::debug!("Checking existing generation esponses");
+    // check if we have responded to this generation already
+    log::debug!("Checking existing generation responses");
     let responses = node.get_task_responses(task_id).await?;
     if responses.iter().any(|r| r.responder == node.address()) {
         log::debug!("Already responded to {} with generation", task_id);
@@ -47,9 +47,11 @@ pub async fn handle_generation(
     let (_, model) = workflows.get_any_matching_model(models_vec)?;
     log::debug!("Using model: {} from {}", model, models_string);
 
+    // parse protocol string early, in case it cannot be parsed
+    let protocol_string = bytes32_to_string(&protocol)?;
+
     // execute task
     log::debug!("Executing the workflow");
-    let protocol_string = bytes32_to_string(&protocol)?;
     let mut input = Request::try_parse_bytes(&request.input).await?;
     let output = input.execute(model, Some(node)).await?;
     log::debug!("Output: {}", output);
