@@ -33,7 +33,10 @@ impl DriaOracle {
         let tx = req.send().await.map_err(contract_error_report)?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let receipt = tx.get_receipt().await?;
+        let receipt = tx
+            .with_timeout(self.config.tx_timeout)
+            .get_receipt()
+            .await?;
         Ok(receipt)
     }
 
@@ -48,7 +51,10 @@ impl DriaOracle {
             .wrap_err("could not approve tokens")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let receipt = tx.get_receipt().await?;
+        let receipt = tx
+            .with_timeout(self.config.tx_timeout)
+            .get_receipt()
+            .await?;
         Ok(receipt)
     }
 

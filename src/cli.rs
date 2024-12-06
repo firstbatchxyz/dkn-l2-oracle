@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{commands, contracts::OracleKind, DriaOracle, DriaOracleConfig};
 use alloy::{
     eips::BlockNumberOrTag,
@@ -22,6 +24,18 @@ fn parse_url(value: &str) -> Result<Url> {
 /// `value_parser` to parse a hexadecimal `str` to 256-bit type `B256`.
 fn parse_secret_key(value: &str) -> Result<B256> {
     B256::from_hex(value).map_err(Into::into)
+}
+
+/// `value parser` to parse a `str` to `BlockNumberOrTag`
+/// where if it can be parsed as `u64`, we call `BlockNumberOrTag::from_u64`
+/// otherwise we call `BlockNumberOrTag::from_str`.
+fn parse_block_number_or_tag(value: &str) -> Result<BlockNumberOrTag> {
+    match value.parse::<u64>() {
+        // parse block no from its decimal representation
+        Ok(block_number) => Ok(BlockNumberOrTag::from(block_number)),
+        // parse block no from hex, or parse its tag
+        Err(_) => BlockNumberOrTag::from_str(value).map_err(Into::into),
+    }
 }
 
 // https://docs.rs/clap/latest/clap/_derive/index.html#arg-attributes
@@ -49,21 +63,22 @@ enum Commands {
     Start {
         #[arg(
             long,
-            help = "Starting block number to listen for, defaults to 'latest'."
+            help = "Starting block number to listen for, defaults to 'latest'.",
+            value_parser = parse_block_number_or_tag
         )]
         from: Option<BlockNumberOrTag>,
         #[arg(help = "The oracle kinds to handle tasks as.", required = false)]
         kinds: Vec<OracleKind>,
-        #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser=parse_model)]
+        #[arg(short, long = "model", help = "The models to serve.", required = true, value_parser = parse_model)]
         models: Vec<Model>,
     },
     /// View status of a given task.
     View { task_id: U256 },
     /// View tasks between specific blocks.
     Tasks {
-        #[arg(long, help = "Starting block number, defaults to 'earliest'.")]
+        #[arg(long, help = "Starting block number, defaults to 'earliest'.", value_parser = parse_block_number_or_tag)]
         from: Option<BlockNumberOrTag>,
-        #[arg(long, help = "Ending block number, defaults to 'latest'.")]
+        #[arg(long, help = "Ending block number, defaults to 'latest'.", value_parser = parse_block_number_or_tag)]
         to: Option<BlockNumberOrTag>,
     },
     /// Request a task.

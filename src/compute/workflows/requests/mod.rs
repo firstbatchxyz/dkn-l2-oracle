@@ -161,6 +161,8 @@ impl Request {
 
 #[cfg(test)]
 mod tests {
+    use alloy::hex::FromHex;
+
     use super::*;
 
     // only implemented for testing purposes
@@ -257,25 +259,15 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "run this manually with GPT4oMini vs GPT4o"]
-    async fn test_erroneous() {
-        dotenvy::dotenv().unwrap();
-        let _ = env_logger::builder()
-            .filter_level(log::LevelFilter::Debug)
-            .is_test(true)
-            .try_init();
-
-        // this looks like a workflow, but its not parseable so it should give an errror
-        // let input = "{\"config\":{\"max_steps\":50,\"max_time\":200,\"tools\":[\"ALL\"]},\"external_memory\":{\"backstory\":\"dark hacker\\nlives in the basement of his parents' house\",\"objective\":\"Hacking systems\",\"behaviour\":\"closed but strong\",\"state\":\"\",\"inventory\":[\"Empty Inventory\"]},\"tasks\":[{\"id\":\"simulate\",\"name\":\"State\",\"description\":\"Simulates from the given state to obtain a new state with respect to the given inputs.\",\"prompt\":\"You are a sophisticated 317-dimensional alien world simulator capable of simulating any fictional or non-fictional world with excellent detail. Your task is to simulate one day in the life of a character based on the provided inputs, taking into account every given detail to accurately mimic the created world.\\n\\n---------------------\\n\\nYou just woke up to a new day. When you look at mirror as you wake up, you reflect on yourself and who you are. You are:\\n<backstory>\\n{{backstory}}\\n</backstory>\\n\\nYou remember vividly what drove you in your life. You feel a strong urge to:\\n<objective>\\n{{objective}}\\n</objective>\\n\\n\\nTo be strong and coherent, you repeat out loud how you behave in front of the mirror.\\n<behaviour>\\n{{behaviour}}\\n</behaviour>\\n\\nAs you recall who you are, what you do and your drive is, you write down to a notebook your current progress with your goal:\\n<current_state>\\n{{state}}\\n</current_state>\\n\\nYou look through and see the items in your inventory.\\n<inventory>\\n{{inventory}}\\n</inventory>\\n\\nFirst, an omnipotent being watches you through out the day outlining what you've been through today within your world in <observe> tags. This being is beyond time and space can understand slightest intentions also the complex infinite parameter world around you.\\n\\nYou live another day... It's been a long day and you write down your journal what you've achieved so far today, and what is left with your ambitions. It's only been a day, so you know that you can achieve as much that is possible within a day. \\n\\nWrite this between <journal> tags.\\nStart now:\\n\",\"inputs\":[{\"name\":\"backstory\",\"value\":{\"type\":\"read\",\"key\":\"backstory\"},\"required\":true},{\"name\":\"state\",\"value\":{\"type\":\"read\",\"key\":\"state\"},\"required\":true},{\"name\":\"inventory\",\"value\":{\"type\":\"get_all\",\"key\":\"inventory\"},\"required\":true},{\"name\":\"behaviour\",\"value\":{\"type\":\"read\",\"key\":\"behaviour\"},\"required\":true},{\"name\":\"objective\",\"value\":{\"type\":\"read\",\"key\":\"objective\"},\"required\":true}],\"operator\":\"generation\",\"outputs\":[{\"type\":\"write\",\"key\":\"new_state\",\"value\":\"__result\"}]},{\"id\":\"_end\",\"name\":\"Task\",\"description\":\"Task Description\",\"prompt\":\"\",\"inputs\":[],\"operator\":\"end\",\"outputs\":[]}],\"steps\":[{\"source\":\"simulate\",\"target\":\"_end\"}],\"return_value\":{\"input\":{\"type\":\"read\",\"key\":\"new_state\"},\"to_json\":false}}";
-        let input = Bytes::from_static(&hex_literal::hex!("36623630613364623161396663353163313532383663396539393664363531626633306535626438363730386262396134636339633863636632393236623266"));
-
-        let mut request = Request::try_parse_bytes(&input).await.unwrap();
-        // this is a wrong Workflow object, so instead of being parsed as Request::Workflow it is parsed as Request::String!
-        // small models like GPT4oMini will not be able to handle this, and will output mumbo-jumbo at random times, sometimes will return the input itself
-        // Gpt4o will be able to handle this, it actually understands the task
-
-        let output = request.execute(Model::GPT4o, None).await.unwrap();
-
-        println!("Output:\n{}", output);
+    async fn test_arweave_workflow_parser() {
+        // task 21402 input
+        // 0x30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463
+        let input_bytes = Bytes::from_hex("30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463").unwrap();
+        let workflow = Request::try_parse_bytes(&input_bytes).await.unwrap();
+        if let Request::Workflow(_) = workflow {
+            /* do nothing */
+        } else {
+            panic!("Expected workflow, got something else");
+        }
     }
 }
