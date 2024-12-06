@@ -81,7 +81,9 @@ You can terminate the application from the terminal as usual (e.g. CTRL+C) to qu
 
 #### Using Arweave
 
-To save from gas fees, an Oracle node can upload its response to Arweave and then store the transaction id of that upload to the contract instead. This is differentiated by looking at the response, and see that it is exactly 64 characters
+To save from gas fees, an Oracle node can upload its response to Arweave and then store the transaction id of that upload to the contract instead. This is differentiated by looking at the response, and see that it is exactly 64 hexadecimal characters. It is then decoded from hex and encoded to `base64url` format, which can then be used to access the data at `https//arweave.net/{txid-here}`. This **requires** an Arweave wallet.
+
+Following the same logic, the Oracle node can read task inputs from Arweave as well. This **does not require** an Arweave a wallet.
 
 ### Viewing Tasks
 

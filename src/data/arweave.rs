@@ -149,6 +149,7 @@ impl OracleExternalData for Arweave {
         let b64_key = Self::hex_to_base64(key.as_str())?;
 
         let url = self.base_url.join(&b64_key)?;
+        log::debug!("Fetching from Arweave: {}", url);
         let response = self
             .client
             .get(url)

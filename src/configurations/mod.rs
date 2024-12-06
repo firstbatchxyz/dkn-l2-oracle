@@ -7,12 +7,14 @@ use eyre::{Context, Result};
 use std::env;
 
 /// Configuration for the Dria Oracle.
-///
-/// Stores the `EthereumWallet` instance along with the used RPC url.
 #[derive(Debug, Clone)]
 pub struct DriaOracleConfig {
+    /// Wallet for the oracle.
     pub wallet: EthereumWallet,
+    /// RPC URL for the oracle, decides the connected chain.
     pub rpc_url: Url,
+    /// Optional transaction timeout, is useful to avoid getting stuck at `get_receipt()` when making a transaction.
+    pub tx_timeout: Option<std::time::Duration>,
 }
 
 impl Default for DriaOracleConfig {
@@ -27,7 +29,19 @@ impl DriaOracleConfig {
             PrivateKeySigner::from_bytes(secret_key).wrap_err("Could not parse private key")?;
         let wallet = EthereumWallet::from(signer);
 
-        Ok(Self { wallet, rpc_url })
+        Ok(Self {
+            wallet,
+            rpc_url,
+            tx_timeout: None,
+        })
+    }
+
+    /// Change the transaction timeout.
+    /// This will make transaction wait for the given duration before timing out,
+    /// otherwise the node may get stuck waiting for a lost transaction.
+    pub fn with_tx_timeout(mut self, tx_timeout: std::time::Duration) -> Self {
+        self.tx_timeout = Some(tx_timeout);
+        self
     }
 
     /// Creates the config from the environment variables.

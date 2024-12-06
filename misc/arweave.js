@@ -27,5 +27,7 @@ const inputDecoded = Buffer.from(input, "hex").toString();
 const arweaveTxid = Buffer.from(inputDecoded, "hex").toString("base64url");
 
 // download the actual response from Arweave
-const res = await fetch(`https://arweave.net/${arweaveTxid}`);
+const url = `https://arweave.net/${arweaveTxid}`;
+console.log(url);
+const res = await fetch(url);
 console.log(await res.text());

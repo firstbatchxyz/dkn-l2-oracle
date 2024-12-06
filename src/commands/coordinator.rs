@@ -145,10 +145,18 @@ pub async fn view_task_events(
     from_block: impl Into<BlockNumberOrTag> + Clone,
     to_block: impl Into<BlockNumberOrTag> + Clone,
 ) -> Result<()> {
+    let from_block: BlockNumberOrTag = from_block.clone().into();
+    let to_block: BlockNumberOrTag = to_block.clone().into();
     log::info!(
         "Viewing task ids & statuses between blocks: {} - {}",
-        from_block.clone().into(),
-        to_block.clone().into()
+        from_block
+            .as_number()
+            .map(|n| n.to_string())
+            .unwrap_or(from_block.to_string()),
+        to_block
+            .as_number()
+            .map(|n| n.to_string())
+            .unwrap_or(to_block.to_string())
     );
 
     let task_events = node.get_tasks_in_range(from_block, to_block).await?;

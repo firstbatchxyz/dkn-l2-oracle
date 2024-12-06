@@ -16,7 +16,10 @@ impl DriaOracle {
             .wrap_err(eyre!("Could not register."))?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let receipt = tx.get_receipt().await?;
+        let receipt = tx
+            .with_timeout(self.config.tx_timeout)
+            .get_receipt()
+            .await?;
         Ok(receipt)
     }
 
@@ -32,7 +35,10 @@ impl DriaOracle {
             .wrap_err("could not unregister")?;
 
         log::info!("Hash: {:?}", tx.tx_hash());
-        let receipt = tx.get_receipt().await?;
+        let receipt = tx
+            .with_timeout(self.config.tx_timeout)
+            .get_receipt()
+            .await?;
         Ok(receipt)
     }
 
