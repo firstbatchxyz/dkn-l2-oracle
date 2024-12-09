@@ -6,19 +6,15 @@
     "max_time": 50,
     "tools": [""]
   },
-  "external_memory": {
-    "context": [""],
-    "question": [""],
-    "answer": [""]
-  },
+  "external_memory": {},
   "tasks": [
     {
       "id": "A",
       "name": "Generate with history",
       "description": "Expects an array of messages for generation",
+      "operator": "generation",
       "messages": [],
       "inputs": [],
-      "operator": "generation",
       "outputs": [
         {
           "type": "write",
@@ -31,9 +27,9 @@
       "id": "__end",
       "name": "end",
       "description": "End of the task",
+      "operator": "end",
       "messages": [{ "role": "user", "content": "End of the task" }],
       "inputs": [],
-      "operator": "end",
       "outputs": []
     }
   ],

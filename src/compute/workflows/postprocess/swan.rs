@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use super::PostProcess;
 
-/// Swan post-processor that seeks for lines between `<buy_list>` and `</buy_list>`.
+/// Swan post-processor that seeks for lines between `<shop_list>` and `</shop_list>`.
 /// and returns the intermediate strings as an array of strings.
 ///
 /// The original input is kept as metadata.
@@ -37,7 +37,7 @@ impl PostProcess for SwanPurchasePostProcessor {
         let mut shopping_list_lines = Vec::new();
         for line in input.lines() {
             if line.contains(self.start_marker) {
-                // if we see the buy_list start marker, we can start collecting lines
+                // if we see the shop_list start marker, we can start collecting lines
                 collecting = true;
             } else if line.contains(self.end_marker) {
                 // if we see the buy list end marker, we can stop collecting lines
@@ -64,7 +64,10 @@ impl PostProcess for SwanPurchasePostProcessor {
 
 #[cfg(test)]
 mod tests {
-    use alloy::{hex::FromHex, primitives::Address};
+    use alloy::{
+        hex::FromHex,
+        primitives::{address, Address},
+    };
 
     use super::*;
 
@@ -73,17 +76,17 @@ mod tests {
         const INPUT: &str = r#"
 some blabla here and there
 
-<buy_list>
+<shop_list>
 0x4200000000000000000000000000000000000001
 0x4200000000000000000000000000000000000002
 0x4200000000000000000000000000000000000003
 0x4200000000000000000000000000000000000004
-</buy_list>
+</shop_list>
     
 some more blabla here
                 "#;
 
-        let post_processor = SwanPurchasePostProcessor::new("<buy_list>", "</buy_list>");
+        let post_processor = SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>");
 
         let (output, metadata, _) = post_processor.post_process(INPUT.to_string()).unwrap();
         assert_eq!(
@@ -122,9 +125,14 @@ some more blabla here
         let post_processor = SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>");
 
         let (output, _, _) = post_processor.post_process(INPUT.to_string()).unwrap();
-        println!("{}", output);
-
         let addresses = <Vec<Address>>::abi_decode(&output, true).unwrap();
-        assert_eq!(addresses.len(), 5, "must have listed addresses");
+        let expected_addresses = vec![
+            address!("36f55f830D6E628a78Fcb70F73f9D005BaF88eE3"),
+            address!("Ad75C9358799e830F0c23a4BB28dF4D2cCCc8846"),
+            address!("26F5B12b67D5F006826824A73F58b88D6bdAA74B"),
+            address!("671527de058BaD60C6151cA29d501C87439bCF62"),
+            address!("66FC9dC1De3db773891753CD257359A26e876305"),
+        ];
+        assert_eq!(addresses, expected_addresses, "must have listed addresses");
     }
 }

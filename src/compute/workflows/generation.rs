@@ -3,11 +3,7 @@ use dkn_workflows::{Entry, Executor, MessageInput, Model, ProgramMemory, Workflo
 use eyre::{eyre, Context, Result};
 
 use super::{postprocess::*, presets::*};
-use crate::{
-    bytes_to_string,
-    data::{Arweave, OracleExternalData},
-    DriaOracle,
-};
+use crate::{compute::parse_downloadable, DriaOracle};
 
 /// A request with chat history.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -20,7 +16,7 @@ pub struct ChatHistoryRequest {
 
 /// An oracle request.
 #[derive(Debug)]
-pub enum Request {
+pub enum GenerationRequest {
     /// A chat-history request.
     ChatHistory(ChatHistoryRequest),
     /// The request itself is a Workflow object, we execute it directly.
@@ -29,7 +25,7 @@ pub enum Request {
     String(String),
 }
 
-impl Request {
+impl GenerationRequest {
     pub fn request_type(&self) -> &str {
         match self {
             Self::ChatHistory(_) => "chat",
@@ -40,7 +36,7 @@ impl Request {
 
     /// Given an input of byte-slice, parses it into a valid request type.
     pub async fn try_parse_bytes(input_bytes: &Bytes) -> Result<Self> {
-        let input_string = Self::parse_downloadable(input_bytes).await?;
+        let input_string = parse_downloadable(input_bytes).await?;
         log::debug!("Parsing input string: {}", input_string);
         Ok(Self::try_parse_string(input_string).await)
     }
@@ -48,27 +44,34 @@ impl Request {
     /// Given an input of string, parses it into a valid request type.
     pub async fn try_parse_string(input_string: String) -> Self {
         if let Ok(chat_input) = serde_json::from_str::<ChatHistoryRequest>(&input_string) {
-            Request::ChatHistory(chat_input)
+            GenerationRequest::ChatHistory(chat_input)
         } else if let Ok(workflow) = serde_json::from_str::<Workflow>(&input_string) {
-            Request::Workflow(workflow)
+            GenerationRequest::Workflow(workflow)
         } else {
-            Request::String(input_string)
+            GenerationRequest::String(input_string)
         }
     }
 
     /// Executes a request using the given model, and optionally a node.
     /// Returns the raw string output.
     pub async fn execute(&mut self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
-        log::debug!("Executing {} request with: {}", self.request_type(), model);
+        log::debug!(
+            "Executing {} generation request with: {}",
+            self.request_type(),
+            model
+        );
         let mut memory = ProgramMemory::new();
         let executor = Executor::new(model);
 
         match self {
+            // workflows are executed directly without any prompts
+            // as we expect their memory to be pre-filled
             Self::Workflow(workflow) => executor
                 .execute(None, workflow, &mut memory)
                 .await
                 .wrap_err("could not execute worfklow input"),
 
+            // string requests are used with the generation workflow with a given prompt
             Self::String(input) => {
                 let entry = Entry::String(input.clone());
                 executor
@@ -77,6 +80,8 @@ impl Request {
                     .wrap_err("could not execute worfklow for string input")
             }
 
+            // chat history requests are used with the chat workflow
+            // and the existing history is fetched & parsed from previous requests
             Self::ChatHistory(chat_request) => {
                 let mut history = if chat_request.history_id == 0 {
                     // if task id is zero, there is no prior history
@@ -89,7 +94,7 @@ impl Request {
                         .wrap_err("could not get chat history task from contract")?;
 
                     // parse it as chat history output
-                    let history_str = Self::parse_downloadable(&history_task.output).await?;
+                    let history_str = parse_downloadable(&history_task.output).await?;
 
                     serde_json::from_str::<Vec<MessageInput>>(&history_str)?
                 } else {
@@ -128,6 +133,10 @@ impl Request {
         }
     }
 
+    /// Post-processes the output string based on the given protocol.
+    /// Returns the output, metadata, and a boolean indicating if storage is allowed or not.
+    ///
+    /// If the protocol is not recognized, it defaults to `IdentityPostProcessor`.
     pub async fn post_process(output: String, protocol: &str) -> Result<(Bytes, Bytes, bool)> {
         match protocol.split('/').next().unwrap_or_default() {
             SwanPurchasePostProcessor::PROTOCOL => {
@@ -135,27 +144,6 @@ impl Request {
             }
             _ => IdentityPostProcessor.post_process(output),
         }
-    }
-
-    /// Parses a given bytes input to a string, and if it is a storage key identifier it automatically
-    /// downloads the data from Arweave.
-    pub async fn parse_downloadable(input_bytes: &Bytes) -> Result<String> {
-        // first, convert to string
-        let mut input_string = bytes_to_string(input_bytes)?;
-
-        // then, check storage
-        if Arweave::is_key(input_string.clone()) {
-            // if its a txid, we download the data and parse it again
-            let input_bytes_from_arweave = Arweave::default()
-                .get(input_string)
-                .await
-                .wrap_err("could not download from Arweave")?;
-
-            // convert the input to string
-            input_string = bytes_to_string(&input_bytes_from_arweave)?;
-        }
-
-        Ok(input_string)
     }
 }
 
@@ -167,7 +155,7 @@ mod tests {
 
     // only implemented for testing purposes
     // because `Workflow` does not implement `PartialEq`
-    impl PartialEq for Request {
+    impl PartialEq for GenerationRequest {
         fn eq(&self, other: &Self) -> bool {
             match (self, other) {
                 (Self::ChatHistory(a), Self::ChatHistory(b)) => {
@@ -183,8 +171,11 @@ mod tests {
     #[tokio::test]
     async fn test_parse_request_string() {
         let request_str = "foobar";
-        let entry = Request::try_parse_bytes(&request_str.as_bytes().into()).await;
-        assert_eq!(entry.unwrap(), Request::String(request_str.into()));
+        let entry = GenerationRequest::try_parse_bytes(&request_str.as_bytes().into()).await;
+        assert_eq!(
+            entry.unwrap(),
+            GenerationRequest::String(request_str.into())
+        );
     }
 
     #[tokio::test]
@@ -194,17 +185,23 @@ mod tests {
         let arweave_key = "660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0";
         let expected_str = "\"Hello, Arweave!\"";
 
-        let entry = Request::try_parse_bytes(&arweave_key.as_bytes().into()).await;
-        assert_eq!(entry.unwrap(), Request::String(expected_str.into()));
+        let entry = GenerationRequest::try_parse_bytes(&arweave_key.as_bytes().into()).await;
+        assert_eq!(
+            entry.unwrap(),
+            GenerationRequest::String(expected_str.into())
+        );
     }
 
     #[tokio::test]
     async fn test_parse_request_workflow() {
-        let workflow_str = include_str!("../presets/generation.json");
+        let workflow_str = include_str!("presets/generation.json");
         let expected_workflow = serde_json::from_str::<Workflow>(&workflow_str).unwrap();
 
-        let entry = Request::try_parse_bytes(&workflow_str.as_bytes().into()).await;
-        assert_eq!(entry.unwrap(), Request::Workflow(expected_workflow));
+        let entry = GenerationRequest::try_parse_bytes(&workflow_str.as_bytes().into()).await;
+        assert_eq!(
+            entry.unwrap(),
+            GenerationRequest::Workflow(expected_workflow)
+        );
     }
 
     #[tokio::test]
@@ -214,15 +211,15 @@ mod tests {
             content: "foobar".to_string(),
         };
         let request_bytes = serde_json::to_vec(&request).unwrap();
-        let entry = Request::try_parse_bytes(&request_bytes.into()).await;
-        assert_eq!(entry.unwrap(), Request::ChatHistory(request));
+        let entry = GenerationRequest::try_parse_bytes(&request_bytes.into()).await;
+        assert_eq!(entry.unwrap(), GenerationRequest::ChatHistory(request));
     }
 
     #[tokio::test]
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
-        let mut request = Request::String("What is the result of 2 + 2?".to_string());
+        let mut request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
         let output = request.execute(Model::Llama3_1_8B, None).await.unwrap();
 
         println!("Output:\n{}", output);
@@ -233,7 +230,7 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
-        let mut request = Request::String("What is the result of 2 + 2?".to_string());
+        let mut request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
         let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
 
         println!("Output:\n{}", output);
@@ -249,7 +246,7 @@ mod tests {
             content: "What is 2+2?".to_string(),
         };
         let request_bytes = serde_json::to_vec(&request).unwrap();
-        let mut request = Request::try_parse_bytes(&request_bytes.into())
+        let mut request = GenerationRequest::try_parse_bytes(&request_bytes.into())
             .await
             .unwrap();
         let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
@@ -263,8 +260,10 @@ mod tests {
         // task 21402 input
         // 0x30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463
         let input_bytes = Bytes::from_hex("30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463").unwrap();
-        let workflow = Request::try_parse_bytes(&input_bytes).await.unwrap();
-        if let Request::Workflow(_) = workflow {
+        let workflow = GenerationRequest::try_parse_bytes(&input_bytes)
+            .await
+            .unwrap();
+        if let GenerationRequest::Workflow(_) = workflow {
             /* do nothing */
         } else {
             panic!("Expected workflow, got something else");

@@ -14,6 +14,7 @@
       "id": "evaluate",
       "name": "Task",
       "description": "Task Description",
+      "operator": "generation",
       "messages": [
         {
           "role": "user",
@@ -39,7 +40,6 @@
           "required": true
         }
       ],
-      "operator": "generation",
       "outputs": [
         {
           "type": "write",
