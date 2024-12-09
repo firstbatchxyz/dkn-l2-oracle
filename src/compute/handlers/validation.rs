@@ -41,16 +41,15 @@ pub async fn handle_validation(
         .wrap_err("could not get task request")?;
 
     // fetch each generation response & score it
-    // for i in 0..request.parameters.numGenerations {
-    //     // let response = node
-    //     //     .get_task_responses(task_id, i)
-    //     //     .await
-    //     //     .wrap_err("could not get generation")?;
-    //     let score = parse_ether("1.0").unwrap();
-    // }
+    log::debug!("Starting validations");
+    let mut scores = Vec::new();
+    for i in 0..request.parameters.numGenerations {
+        let score = parse_ether("1.0").unwrap();
+        scores.push(score);
+    }
 
     // FIXME: will add validation prompt here
-    log::debug!("Validating the task");
+
     let scores = (0..request.parameters.numGenerations)
         .map(|_| parse_ether("1.0").unwrap())
         .collect::<Vec<_>>();

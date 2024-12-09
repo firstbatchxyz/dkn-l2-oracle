@@ -3,17 +3,18 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref GENERATION_WORKFLOW: Workflow =
-        serde_json::from_str(include_str!("generation.json"))
+        serde_json::from_str(include_str!("presets/generation.json"))
             .expect("could not parse generation workflow");
 }
 
+// const ee: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "aaa"));
+
 pub fn get_chat_workflow() -> Workflow {
-    serde_json::from_str(include_str!("chat.json")).expect("could not parse chat workflow")
+    serde_json::from_str(include_str!("presets/chat.json")).expect("could not parse chat workflow")
 }
 
-#[allow(unused)]
 pub fn get_validation_workflow() -> Workflow {
-    serde_json::from_str(include_str!("validation.json"))
+    serde_json::from_str(include_str!("presets/validation.json"))
         .expect("could not parse validation workflow")
 }
 

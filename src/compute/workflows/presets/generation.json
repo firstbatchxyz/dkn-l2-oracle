@@ -6,16 +6,13 @@
     "max_time": 50,
     "tools": [""]
   },
-  "external_memory": {
-    "context": [""],
-    "question": [""],
-    "answer": [""]
-  },
+  "external_memory": {},
   "tasks": [
     {
       "id": "A",
       "name": "Generate",
       "description": "Executes a simple generation request",
+      "operator": "generation",
       "messages": [
         {
           "role": "user",
@@ -32,7 +29,7 @@
           "required": true
         }
       ],
-      "operator": "generation",
+
       "outputs": [
         {
           "type": "write",
