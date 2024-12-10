@@ -10,7 +10,7 @@ use eyre::Result;
 ///
 /// Note that the `async_trait` has `?Send` specified, as by default it makes them `Send` but Arweave does not have it.
 #[async_trait(?Send)]
-pub trait OracleExternalData {
+pub trait OracleExternalStorage {
     type Key: Clone;
     type Value: Clone + Debug;
 

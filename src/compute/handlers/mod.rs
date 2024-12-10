@@ -16,8 +16,6 @@ use validation::*;
 ///
 /// - Generation tasks are forwarded to `handle_generation`
 /// - Validation tasks are forwarded to `handle_validation`
-///
-///
 pub async fn handle_request(
     node: &DriaOracle,
     kinds: &[OracleKind],

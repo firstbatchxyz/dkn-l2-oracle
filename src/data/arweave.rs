@@ -1,4 +1,4 @@
-use super::traits::OracleExternalData;
+use super::traits::OracleExternalStorage;
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
 use base64::prelude::*;
@@ -138,7 +138,7 @@ impl Default for Arweave {
 }
 
 #[async_trait(?Send)]
-impl OracleExternalData for Arweave {
+impl OracleExternalStorage for Arweave {
     type Key = String;
     type Value = Bytes;
 

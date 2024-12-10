@@ -1,8 +1,11 @@
 use alloy::primitives::{Bytes, U256};
-use dkn_workflows::{Entry, Executor, MessageInput, Model, ProgramMemory, Workflow};
+use dkn_workflows::{Executor, MessageInput, Model, ProgramMemory, Workflow};
 use eyre::{eyre, Context, Result};
 
-use super::{postprocess::*, presets::*};
+use super::{
+    postprocess::{self, *},
+    workflow::*,
+};
 use crate::{compute::parse_downloadable, DriaOracle};
 
 /// A request with chat history.
@@ -73,9 +76,9 @@ impl GenerationRequest {
 
             // string requests are used with the generation workflow with a given prompt
             Self::String(input) => {
-                let entry = Entry::String(input.clone());
+                let workflow = make_generation_workflow(input.clone())?;
                 executor
-                    .execute(Some(&entry), &GENERATION_WORKFLOW, &mut memory)
+                    .execute(None, &workflow, &mut memory)
                     .await
                     .wrap_err("could not execute worfklow for string input")
             }
@@ -101,18 +104,8 @@ impl GenerationRequest {
                     return Err(eyre!("node is required for chat history"));
                 };
 
-                // append user input to chat history
-                history.push(MessageInput {
-                    role: "user".to_string(),
-                    content: chat_request.content.clone(),
-                });
-
                 // prepare the workflow with chat history
-                let mut workflow = get_chat_workflow();
-                let task = workflow.get_tasks_by_id_mut("A").unwrap();
-                task.messages = history.clone();
-
-                // call workflow
+                let workflow = make_chat_workflow(history.clone(), chat_request.content.clone())?;
                 let output = executor
                     .execute(None, &workflow, &mut memory)
                     .await
@@ -142,7 +135,7 @@ impl GenerationRequest {
             SwanPurchasePostProcessor::PROTOCOL => {
                 SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
             }
-            _ => IdentityPostProcessor.post_process(output),
+            _ => postprocess::IdentityPostProcessor.post_process(output),
         }
     }
 }
@@ -193,18 +186,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_parse_request_workflow() {
-        let workflow_str = include_str!("presets/generation.json");
-        let expected_workflow = serde_json::from_str::<Workflow>(&workflow_str).unwrap();
-
-        let entry = GenerationRequest::try_parse_bytes(&workflow_str.as_bytes().into()).await;
-        assert_eq!(
-            entry.unwrap(),
-            GenerationRequest::Workflow(expected_workflow)
-        );
-    }
-
-    #[tokio::test]
     async fn test_parse_request_chat() {
         let request = ChatHistoryRequest {
             history_id: 0,
@@ -213,6 +194,21 @@ mod tests {
         let request_bytes = serde_json::to_vec(&request).unwrap();
         let entry = GenerationRequest::try_parse_bytes(&request_bytes.into()).await;
         assert_eq!(entry.unwrap(), GenerationRequest::ChatHistory(request));
+    }
+
+    #[tokio::test]
+    async fn test_parse_request_workflow() {
+        // task 21402 input
+        // 0x30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463
+        let input_bytes = Bytes::from_hex("30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463").unwrap();
+        let workflow = GenerationRequest::try_parse_bytes(&input_bytes)
+            .await
+            .unwrap();
+        if let GenerationRequest::Workflow(_) = workflow {
+            /* do nothing */
+        } else {
+            panic!("Expected workflow, got something else");
+        }
     }
 
     #[tokio::test]
@@ -253,20 +249,5 @@ mod tests {
 
         println!("Output:\n{}", output);
         assert!(output.contains('4'));
-    }
-
-    #[tokio::test]
-    async fn test_arweave_workflow_parser() {
-        // task 21402 input
-        // 0x30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463
-        let input_bytes = Bytes::from_hex("30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463").unwrap();
-        let workflow = GenerationRequest::try_parse_bytes(&input_bytes)
-            .await
-            .unwrap();
-        if let GenerationRequest::Workflow(_) = workflow {
-            /* do nothing */
-        } else {
-            panic!("Expected workflow, got something else");
-        }
     }
 }

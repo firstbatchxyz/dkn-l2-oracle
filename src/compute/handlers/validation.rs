@@ -1,9 +1,10 @@
-use crate::{mine_nonce, DriaOracle};
-use alloy::{
-    primitives::{utils::parse_ether, Bytes, U256},
-    rpc::types::TransactionReceipt,
+use crate::{
+    compute::{execute::validate_generations, parse_downloadable},
+    data::Arweave,
+    mine_nonce, DriaOracle,
 };
-use dkn_workflows::DriaWorkflowsConfig;
+use alloy::{primitives::U256, rpc::types::TransactionReceipt};
+use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::{eyre, Context, Result};
 
 /// Handles a validation request.
@@ -33,29 +34,41 @@ pub async fn handle_validation(
         return Err(eyre!("Already validated {}", task_id));
     }
 
-    // fetch request and generations
+    // fetch the request from contract
     log::debug!("Fetching the task request");
     let request = node
         .get_task_request(task_id)
         .await
         .wrap_err("could not get task request")?;
 
-    // fetch each generation response & score it
-    log::debug!("Starting validations");
-    let mut scores = Vec::new();
-    for i in 0..request.parameters.numGenerations {
-        let score = parse_ether("1.0").unwrap();
-        scores.push(score);
+    // fetch each generation response & download its metadata
+    log::debug!("Fetching response messages");
+    let responses = node
+        .get_task_responses(task_id)
+        .await
+        .wrap_err("could not get task responses")?;
+    let mut generations = Vec::new();
+    for response in responses {
+        let metadata_str = parse_downloadable(&response.metadata).await?;
+        generations.push(metadata_str);
     }
+    let input = parse_downloadable(&request.input).await?;
 
-    // FIXME: will add validation prompt here
-
-    let scores = (0..request.parameters.numGenerations)
-        .map(|_| parse_ether("1.0").unwrap())
+    // validate each response
+    // TODO: decide model w.r.t config
+    log::debug!("Computing validation scores");
+    let validations = validate_generations(input, generations, Model::GPT4o).await?;
+    let scores = validations
+        .iter()
+        .map(|v| v.final_score_as_solidity_type())
         .collect::<Vec<_>>();
-    // FIXME: metadata is empty for now, as dummy data
-    // FIXME: can add Arweave trick for metadata here
-    let metadata = Bytes::default();
+    let metadata =
+        serde_json::to_string(&validations).wrap_err("could not serialize validations")?;
+
+    // uploading to storage
+    log::debug!("Uploading metadata to storage");
+    let arweave = Arweave::new_from_env()?;
+    let metadata = arweave.put_if_large(metadata.into()).await?;
 
     // mine nonce
     log::debug!("Mining nonce for task");

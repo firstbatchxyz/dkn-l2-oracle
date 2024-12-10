@@ -2,4 +2,4 @@ mod arweave;
 pub use arweave::Arweave;
 
 mod traits;
-pub use traits::OracleExternalData;
+pub use traits::OracleExternalStorage;

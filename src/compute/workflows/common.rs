@@ -3,7 +3,7 @@ use eyre::{Context, Result};
 
 use crate::{
     bytes_to_string,
-    data::{Arweave, OracleExternalData},
+    data::{Arweave, OracleExternalStorage},
 };
 
 /// Parses a given bytes input to a string, and if it is a storage key identifier it automatically

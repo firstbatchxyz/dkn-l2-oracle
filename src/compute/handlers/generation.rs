@@ -61,16 +61,19 @@ pub async fn handle_generation(
         "Post-processing the output for protocol: {}",
         protocol_string
     );
-    let (output, metadata, use_storage) = GenerationRequest::post_process(output, &protocol_string).await?;
+    let (output, metadata, use_storage) =
+        GenerationRequest::post_process(output, &protocol_string).await?;
 
     // uploading to storage
-    log::debug!("Uploading output to storage");
     let arweave = Arweave::new_from_env()?;
     let output = if use_storage {
+        log::debug!("Uploading output to storage");
         arweave.put_if_large(output).await?
     } else {
+        log::debug!("Not uploading output to storage");
         output
     };
+    log::debug!("Uploading metadata to storage");
     let metadata = arweave.put_if_large(metadata).await?;
 
     // mine nonce
