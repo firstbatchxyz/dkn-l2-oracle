@@ -1,8 +1,9 @@
 use crate::{
-    compute::GenerationRequest,
+    compute::generation::GenerationRequest,
     contracts::{bytes32_to_string, bytes_to_string},
-    data::Arweave,
-    mine_nonce, DriaOracle,
+    mine_nonce,
+    storage::Arweave,
+    DriaOracle,
 };
 use alloy::{
     primitives::{FixedBytes, U256},

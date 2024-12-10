@@ -6,11 +6,8 @@ use alloy::rpc::types::TransactionReceipt;
 use dkn_workflows::DriaWorkflowsConfig;
 use eyre::Result;
 
-mod generation;
-use generation::*;
-
-mod validation;
-use validation::*;
+use super::generation::handle_generation;
+use super::validation::handle_validation;
 
 /// Handles a task request.
 ///

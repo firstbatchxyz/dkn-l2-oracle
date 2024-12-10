@@ -2,7 +2,7 @@ use alloy::primitives::U256;
 use dkn_workflows::{Executor, Model, ProgramMemory};
 use eyre::{Context, Result};
 
-use super::workflow::make_validation_workflow;
+use super::workflow::*;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ValidationResult {
@@ -34,7 +34,7 @@ impl ValidationResult {
     }
 }
 
-/// Executes a validation request using the given model.
+/// Validates the given results.
 pub async fn validate_generations(
     instruction: String,
     generations: Vec<String>,
@@ -101,6 +101,14 @@ mod tests {
         assert!(
             results[2].final_score == 1,
             "expected minimum score from irrelevant response"
+        );
+        assert!(
+            results[3].final_score == 1,
+            "expected minimum score from correct but irrational response"
+        );
+        assert!(
+            results[4].final_score == 1,
+            "expected minimum score from correct but irrelevant response"
         );
     }
 }

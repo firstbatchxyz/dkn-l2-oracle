@@ -2,4 +2,9 @@ mod execute;
 pub use execute::GenerationRequest;
 
 pub mod postprocess;
-pub mod workflow;
+
+mod workflow;
+pub use workflow::*;
+
+mod handler;
+pub use handler::handle_generation;

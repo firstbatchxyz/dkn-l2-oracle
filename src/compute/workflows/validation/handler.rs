@@ -1,14 +1,11 @@
-use crate::{
-    compute::{execute::validate_generations, parse_downloadable},
-    data::Arweave,
-    mine_nonce, DriaOracle,
-};
+use crate::{mine_nonce, storage::Arweave, DriaOracle};
 use alloy::{primitives::U256, rpc::types::TransactionReceipt};
 use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::{eyre, Context, Result};
 
+use super::execute::validate_generations;
+
 /// Handles a validation request.
-#[allow(unused)]
 pub async fn handle_validation(
     node: &DriaOracle,
     workflows: &DriaWorkflowsConfig,
@@ -49,10 +46,10 @@ pub async fn handle_validation(
         .wrap_err("could not get task responses")?;
     let mut generations = Vec::new();
     for response in responses {
-        let metadata_str = parse_downloadable(&response.metadata).await?;
+        let metadata_str = Arweave::parse_downloadable(&response.metadata).await?;
         generations.push(metadata_str);
     }
-    let input = parse_downloadable(&request.input).await?;
+    let input = Arweave::parse_downloadable(&request.input).await?;
 
     // validate each response
     // TODO: decide model w.r.t config

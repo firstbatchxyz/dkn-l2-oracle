@@ -1,12 +1,10 @@
+use crate::{storage::Arweave, DriaOracle};
 use alloy::primitives::{Bytes, U256};
 use dkn_workflows::{Executor, MessageInput, Model, ProgramMemory, Workflow};
 use eyre::{eyre, Context, Result};
 
-use super::{
-    postprocess::{self, *},
-    workflow::*,
-};
-use crate::{compute::parse_downloadable, DriaOracle};
+use super::postprocess::*;
+use super::workflow::*;
 
 /// A request with chat history.
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -39,7 +37,7 @@ impl GenerationRequest {
 
     /// Given an input of byte-slice, parses it into a valid request type.
     pub async fn try_parse_bytes(input_bytes: &Bytes) -> Result<Self> {
-        let input_string = parse_downloadable(input_bytes).await?;
+        let input_string = Arweave::parse_downloadable(input_bytes).await?;
         log::debug!("Parsing input string: {}", input_string);
         Ok(Self::try_parse_string(input_string).await)
     }
@@ -57,7 +55,7 @@ impl GenerationRequest {
 
     /// Executes a request using the given model, and optionally a node.
     /// Returns the raw string output.
-    pub async fn execute(&mut self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
+    pub async fn execute(&self, model: Model, node: Option<&DriaOracle>) -> Result<String> {
         log::debug!(
             "Executing {} generation request with: {}",
             self.request_type(),
@@ -97,7 +95,7 @@ impl GenerationRequest {
                         .wrap_err("could not get chat history task from contract")?;
 
                     // parse it as chat history output
-                    let history_str = parse_downloadable(&history_task.output).await?;
+                    let history_str = Arweave::parse_downloadable(&history_task.output).await?;
 
                     serde_json::from_str::<Vec<MessageInput>>(&history_str)?
                 } else {
@@ -135,7 +133,7 @@ impl GenerationRequest {
             SwanPurchasePostProcessor::PROTOCOL => {
                 SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
             }
-            _ => postprocess::IdentityPostProcessor.post_process(output),
+            _ => IdentityPostProcessor.post_process(output),
         }
     }
 }
@@ -215,7 +213,7 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_ollama_generation() {
         dotenvy::dotenv().unwrap();
-        let mut request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
+        let request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
         let output = request.execute(Model::Llama3_1_8B, None).await.unwrap();
 
         println!("Output:\n{}", output);
@@ -226,7 +224,7 @@ mod tests {
     #[ignore = "run this manually"]
     async fn test_openai_generation() {
         dotenvy::dotenv().unwrap();
-        let mut request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
+        let request = GenerationRequest::String("What is the result of 2 + 2?".to_string());
         let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
 
         println!("Output:\n{}", output);
@@ -242,7 +240,7 @@ mod tests {
             content: "What is 2+2?".to_string(),
         };
         let request_bytes = serde_json::to_vec(&request).unwrap();
-        let mut request = GenerationRequest::try_parse_bytes(&request_bytes.into())
+        let request = GenerationRequest::try_parse_bytes(&request_bytes.into())
             .await
             .unwrap();
         let output = request.execute(Model::GPT4Turbo, None).await.unwrap();
