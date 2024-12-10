@@ -35,7 +35,7 @@ impl ValidationResult {
 }
 
 /// Validates the given results.
-pub async fn validate_generations(
+pub async fn execute_validations(
     instruction: String,
     generations: Vec<String>,
     model: Model,
@@ -81,7 +81,7 @@ mod tests {
         .collect();
 
         let model = Model::GPT4oMini;
-        let results = validate_generations(instruction, generations.clone(), model)
+        let results = execute_validations(instruction, generations.clone(), model)
             .await
             .unwrap();
 

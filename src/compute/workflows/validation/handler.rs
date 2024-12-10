@@ -1,14 +1,13 @@
-use crate::{mine_nonce, storage::Arweave, DriaOracle};
+use crate::{mine_nonce, storage::ArweaveStorage, DriaOracle};
 use alloy::{primitives::U256, rpc::types::TransactionReceipt};
-use dkn_workflows::{DriaWorkflowsConfig, Model};
+use dkn_workflows::Model;
 use eyre::{eyre, Context, Result};
 
-use super::execute::validate_generations;
+use super::execute::execute_validations;
 
 /// Handles a validation request.
 pub async fn handle_validation(
     node: &DriaOracle,
-    workflows: &DriaWorkflowsConfig,
     task_id: U256,
 ) -> Result<Option<TransactionReceipt>> {
     log::info!("Handling validation task {}", task_id);
@@ -46,15 +45,15 @@ pub async fn handle_validation(
         .wrap_err("could not get task responses")?;
     let mut generations = Vec::new();
     for response in responses {
-        let metadata_str = Arweave::parse_downloadable(&response.metadata).await?;
+        let metadata_str = ArweaveStorage::parse_downloadable(&response.metadata).await?;
         generations.push(metadata_str);
     }
-    let input = Arweave::parse_downloadable(&request.input).await?;
+    let input = ArweaveStorage::parse_downloadable(&request.input).await?;
 
     // validate each response
-    // TODO: decide model w.r.t config
     log::debug!("Computing validation scores");
-    let validations = validate_generations(input, generations, Model::GPT4o).await?;
+    let model = Model::GPT4o; // all validations use Gpt 4o
+    let validations = execute_validations(input, generations, model).await?;
     let scores = validations
         .iter()
         .map(|v| v.final_score_as_solidity_type())
@@ -64,7 +63,7 @@ pub async fn handle_validation(
 
     // uploading to storage
     log::debug!("Uploading metadata to storage");
-    let arweave = Arweave::new_from_env()?;
+    let arweave = ArweaveStorage::new_from_env()?;
     let metadata = arweave.put_if_large(metadata.into()).await?;
 
     // mine nonce

@@ -1,8 +1,8 @@
 use crate::{
-    compute::generation::GenerationRequest,
+    compute::generation::execute::execute_generation,
     contracts::{bytes32_to_string, bytes_to_string},
     mine_nonce,
-    storage::Arweave,
+    storage::ArweaveStorage,
     DriaOracle,
 };
 use alloy::{
@@ -11,6 +11,9 @@ use alloy::{
 };
 use dkn_workflows::DriaWorkflowsConfig;
 use eyre::{Context, Result};
+
+use super::postprocess::*;
+use super::request::GenerationRequest;
 
 /// Handles a generation request.
 ///
@@ -53,8 +56,8 @@ pub async fn handle_generation(
 
     // execute task
     log::debug!("Executing the workflow");
-    let mut input = GenerationRequest::try_parse_bytes(&request.input).await?;
-    let output = input.execute(model, Some(node)).await?;
+    let input = GenerationRequest::try_parse_bytes(&request.input).await?;
+    let output = execute_generation(&input, model, Some(node)).await?;
     log::debug!("Output: {}", output);
 
     // post-processing
@@ -63,10 +66,15 @@ pub async fn handle_generation(
         protocol_string
     );
     let (output, metadata, use_storage) =
-        GenerationRequest::post_process(output, &protocol_string).await?;
+        match protocol_string.split('/').next().unwrap_or_default() {
+            SwanPurchasePostProcessor::PROTOCOL => {
+                SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
+            }
+            _ => IdentityPostProcessor.post_process(output),
+        }?;
 
     // uploading to storage
-    let arweave = Arweave::new_from_env()?;
+    let arweave = ArweaveStorage::new_from_env()?;
     let output = if use_storage {
         log::debug!("Uploading output to storage");
         arweave.put_if_large(output).await?

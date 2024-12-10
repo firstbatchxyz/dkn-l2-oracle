@@ -1,5 +1,5 @@
 mod arweave;
-pub use arweave::Arweave;
+pub use arweave::ArweaveStorage;
 
 mod traits;
 pub use traits::IsExternalStorage;

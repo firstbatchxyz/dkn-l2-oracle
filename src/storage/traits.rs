@@ -21,8 +21,8 @@ pub trait IsExternalStorage {
     /// Puts the value and returns the generated key.
     async fn put(&self, value: Self::Value) -> Result<Self::Key>;
 
-    /// Checks if the key is valid.
-    fn is_key(key: Self::Key) -> bool;
+    /// Checks if the given string constitutes a key, and returns it.
+    fn is_key(key: &str) -> Option<Self::Key>;
 
     /// Describes the implementation.
     fn describe() -> String;

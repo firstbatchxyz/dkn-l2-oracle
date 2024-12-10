@@ -37,6 +37,7 @@ impl DriaOracleConfig {
     }
 
     /// Change the transaction timeout.
+    ///
     /// This will make transaction wait for the given duration before timing out,
     /// otherwise the node may get stuck waiting for a lost transaction.
     pub fn with_tx_timeout(mut self, tx_timeout: std::time::Duration) -> Self {
