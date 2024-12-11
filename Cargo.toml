@@ -1,5 +1,5 @@
 [package]
-name = "dkn-oracle"
+name = "dria-oracle"
 description = "Dria Knowledge Network Oracle Node"
 version = "0.1.10"
 edition = "2021"

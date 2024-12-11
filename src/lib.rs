@@ -22,4 +22,4 @@ pub use contracts::{OracleKind, TaskStatus};
 pub mod commands;
 
 /// External data storage, such as Arweave.
-pub mod data;
+pub mod storage;

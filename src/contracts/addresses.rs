@@ -47,12 +47,13 @@ lazy_static! {
             BaseSepolia.into(),
             ContractAddresses {
                 token: address!("4200000000000000000000000000000000000006"),
-                registry: address!("9618D028B25b3f81c24f068A20DBeEE6a728483C"),
-                coordinator: address!("362fDBB20191ba22d53bF3b09646AA387Cd6dF75"),
+                registry: address!("bff452f736c0a2c0122b6d629c4d996274703d3b"),
+                coordinator: address!("1deaca041f094ec67baa4fb36d333cb652e6b7a7"),
             },
         );
 
-        // TODO: add dria
+        // base mainnet
+        // TODO: !!!
 
         contracts
     };

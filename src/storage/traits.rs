@@ -10,7 +10,7 @@ use eyre::Result;
 ///
 /// Note that the `async_trait` has `?Send` specified, as by default it makes them `Send` but Arweave does not have it.
 #[async_trait(?Send)]
-pub trait OracleExternalData {
+pub trait IsExternalStorage {
     type Key: Clone;
     type Value: Clone + Debug;
 
@@ -21,8 +21,8 @@ pub trait OracleExternalData {
     /// Puts the value and returns the generated key.
     async fn put(&self, value: Self::Value) -> Result<Self::Key>;
 
-    /// Checks if the key is valid.
-    fn is_key(key: Self::Key) -> bool;
+    /// Checks if the given string constitutes a key, and returns it.
+    fn is_key(key: &str) -> Option<Self::Key>;
 
     /// Describes the implementation.
     fn describe() -> String;

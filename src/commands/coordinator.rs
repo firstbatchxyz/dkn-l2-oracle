@@ -9,7 +9,7 @@ use alloy::{
     eips::BlockNumberOrTag,
     primitives::{utils::format_ether, U256},
 };
-use dkn_workflows::{DriaWorkflowsConfig, Model};
+use dkn_workflows::{DriaWorkflowsConfig, Model, ModelProvider};
 use eyre::{eyre, Context, Result};
 use futures_util::StreamExt;
 
@@ -22,6 +22,7 @@ pub async fn run_oracle(
 ) -> Result<()> {
     // if kinds are not provided, use the registrations as kinds
     if kinds.is_empty() {
+        log::debug!("No kinds provided. Checking registrations.");
         for kind in [OracleKind::Generator, OracleKind::Validator] {
             if node.is_registered(kind).await? {
                 kinds.push(kind);
@@ -53,10 +54,20 @@ pub async fn run_oracle(
     );
     model_config.check_services().await?;
 
-    // check previous tasks
+    // check if validator has the required model
+    if kinds.contains(&OracleKind::Validator) {
+        if !model_config
+            .models
+            .contains(&(ModelProvider::OpenAI, Model::GPT4o))
+        {
+            return Err(eyre!("Validator must have GPT4o model."))?;
+        }
+    }
+
+    // check previous tasks if `from_block` is not `Latest`
     if from_block.clone().into() != BlockNumberOrTag::Latest {
         log::info!(
-            "Checking previous tasks from {} until now.",
+            "Checking previous tasks from block {} until now.",
             from_block.clone().into()
         );
         let prev_tasks = node

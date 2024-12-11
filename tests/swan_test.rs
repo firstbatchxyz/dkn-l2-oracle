@@ -3,11 +3,11 @@ use alloy::{
     primitives::{utils::parse_ether, Address},
     sol_types::SolValue,
 };
-use dkn_oracle::{
+use dkn_workflows::{DriaWorkflowsConfig, Model};
+use dria_oracle::{
     bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
     OracleKind, TaskStatus, WETH,
 };
-use dkn_workflows::{DriaWorkflowsConfig, Model};
 use eyre::Result;
 
 // TODO: move this to Swan post-process file
