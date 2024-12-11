@@ -5,7 +5,7 @@ async fn main() -> eyre::Result<()> {
     env_logger::builder()
         .format_timestamp(Some(env_logger::TimestampPrecision::Millis))
         .filter(None, log::LevelFilter::Off)
-        .filter_module("dkn_oracle", log::LevelFilter::Info)
+        .filter_module("dria_oracle", log::LevelFilter::Info)
         .filter_module("dkn_workflows", log::LevelFilter::Info)
         .parse_default_env() // reads RUST_LOG variable
         .init();
@@ -17,7 +17,7 @@ async fn main() -> eyre::Result<()> {
     }
 
     // launch CLI
-    dkn_oracle::cli().await?;
+    dria_oracle::cli().await?;
 
     log::info!("Bye!");
     Ok(())

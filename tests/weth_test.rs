@@ -5,7 +5,7 @@
 //! 3. Bob transfers WETH from Alice
 
 use alloy::primitives::utils::parse_ether;
-use dkn_oracle::{DriaOracle, DriaOracleConfig, WETH};
+use dria_oracle::{DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;
 
 #[tokio::test]

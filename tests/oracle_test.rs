@@ -1,5 +1,5 @@
 use alloy::{eips::BlockNumberOrTag, primitives::utils::parse_ether};
-use dkn_oracle::{
+use dria_oracle::{
     bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
     OracleKind, TaskStatus, WETH,
 };
@@ -12,7 +12,7 @@ async fn test_oracle_string_input() -> Result<()> {
 
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Off)
-        .filter_module("dkn_oracle", log::LevelFilter::Debug)
+        .filter_module("dria_oracle", log::LevelFilter::Debug)
         .filter_module("oracle_test", log::LevelFilter::Debug)
         .is_test(true)
         .try_init();

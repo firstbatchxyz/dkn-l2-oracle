@@ -5,8 +5,8 @@
 //! 3. The task is created in the coordinator contract.
 
 use alloy::primitives::utils::parse_ether;
-use dkn_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
 use dkn_workflows::Model;
+use dria_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;
 
 #[tokio::test]
