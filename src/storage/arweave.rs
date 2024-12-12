@@ -20,8 +20,8 @@ pub struct ArweaveStorage {
     /// Path to Arweave keypair (usually JSON)
     wallet: PathBuf,
     /// Base URL for Arweave gateway, e.g:
-    /// - https://gateway.irys.xyz
-    /// - https://node1.bundlr.network
+    /// - <https://gateway.irys.xyz>
+    /// - <https://node1.bundlr.network>
     base_url: Url,
     /// Reqwest client for downloads.
     client: Client,

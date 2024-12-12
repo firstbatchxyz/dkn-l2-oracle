@@ -158,6 +158,7 @@ pub async fn cli() -> Result<()> {
             models,
             from,
         } => {
+            // TODO: add signal handling & looping here, to keep the node running at all times
             commands::run_oracle(
                 &node,
                 kinds,
@@ -170,7 +171,7 @@ pub async fn cli() -> Result<()> {
         Commands::Tasks { from, to } => {
             commands::view_task_events(
                 &node,
-                from.unwrap_or(BlockNumberOrTag::Earliest), // TODO: use coordinator block number as earliest
+                from.unwrap_or(BlockNumberOrTag::Earliest),
                 to.unwrap_or(BlockNumberOrTag::Latest),
             )
             .await?

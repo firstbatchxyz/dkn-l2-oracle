@@ -37,6 +37,8 @@ As for the LLM providers:
 
 - If you are using Ollama, make sure it is running and the host & port are correct.
 - If you are using OpenAI, make sure you provide the `OPENAI_API_KEY`.
+- If you are using Gemini, make sure you provide the `GEMINI_API_KEY`.
+- If you are using OpenRouter, make sure you provide the `OPENROUTER_API_KEY`.
 
 ## Usage
 
