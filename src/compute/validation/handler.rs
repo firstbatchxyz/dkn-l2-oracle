@@ -60,6 +60,7 @@ pub async fn handle_validation(
         .collect::<Vec<_>>();
     let metadata =
         serde_json::to_string(&validations).wrap_err("could not serialize validations")?;
+    log::debug!("Validation metadata:\n{}", metadata);
 
     // uploading to storage
     log::debug!("Uploading metadata to storage");

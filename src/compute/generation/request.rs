@@ -15,11 +15,11 @@ pub struct ChatHistoryRequest {
 /// An oracle request.
 #[derive(Debug)]
 pub enum GenerationRequest {
-    /// A chat-history request.
+    /// A chat-history request, usually indicates a previous response to be continued upon.
     ChatHistory(ChatHistoryRequest),
-    /// The request itself is a Workflow object, we execute it directly.
+    /// A Workflow object, can be executed directly.
     Workflow(Workflow),
-    /// The request is a plain string, we execute it within a generation workflow.
+    /// A plain string request, can be executed with a generation workflow.
     String(String),
 }
 
@@ -84,11 +84,13 @@ mod tests {
     #[tokio::test]
     async fn test_parse_request_arweave() {
         // contains the string: "\"Hello, Arweave!\""
-        // hex for: Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
-        let arweave_key = "660e826587f15c25989c2b8a1299d90987f2ee0862b75fefe3e0427b9de25ae0";
+        let arweave_key = serde_json::json!({
+            "arweave": "Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA"
+        })
+        .to_string();
         let expected_str = "\"Hello, Arweave!\"";
 
-        let entry = GenerationRequest::try_parse_bytes(&arweave_key.as_bytes().into()).await;
+        let entry = GenerationRequest::try_parse_bytes(&arweave_key.into()).await;
         assert_eq!(
             entry.unwrap(),
             GenerationRequest::String(expected_str.into())
@@ -108,12 +110,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_request_workflow() {
-        use alloy::hex::FromHex;
-
-        // task 21402 input
-        // 0x30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463
-        let input_bytes = Bytes::from_hex("30306234343365613266393739626263353263613565363131376534646366353634366662316365343265663566643363643564646638373533643538323463").unwrap();
-        let workflow = GenerationRequest::try_parse_bytes(&input_bytes)
+        // contains a workflow
+        let arweave_key = serde_json::json!({
+            "arweave": "ALRD6i-Xm7xSyl5hF-Tc9WRvsc5C71_TzV3fh1PVgkw"
+        })
+        .to_string();
+        let workflow = GenerationRequest::try_parse_bytes(&arweave_key.into())
             .await
             .unwrap();
         if let GenerationRequest::Workflow(_) = workflow {

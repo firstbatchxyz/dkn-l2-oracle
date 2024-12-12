@@ -24,10 +24,10 @@ impl ValidationResult {
     /// Clamps the score to the range `[1, 5]` and scales it to the range `[1-255]`.
     pub fn final_score_as_solidity_type(&self) -> U256 {
         U256::from(match self.final_score.clamp(1, 5) {
-            1 => 1,
-            2 => 64,
-            3 => 85,
-            4 => 127,
+            1 => 51,
+            2 => 102,
+            3 => 153,
+            4 => 204,
             5 => 255,
             _ => unreachable!(),
         })
@@ -65,7 +65,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "requires OpenAI API key"]
-    async fn test_validation() {
+    async fn test_validation_multiple() {
         dotenvy::dotenv().unwrap();
 
         let instruction = "What is 2 + 2".to_string();
@@ -109,6 +109,25 @@ mod tests {
         assert!(
             results[4].final_score == 1,
             "expected minimum score from correct but irrelevant response"
+        );
+    }
+
+    #[tokio::test]
+    #[ignore = "requires OpenAI API key"]
+    async fn test_validation_single() {
+        dotenvy::dotenv().unwrap();
+
+        let instruction = "Can humans eat mango fruit?".to_string();
+        let generations: Vec<String> = ["Yes they can."].iter().map(|s| s.to_string()).collect();
+
+        let model = Model::GPT4oMini;
+        let results = execute_validations(instruction, generations.clone(), model)
+            .await
+            .unwrap();
+
+        assert!(
+            results[0].final_score == 5,
+            "expected top score from correct response"
         );
     }
 }

@@ -18,8 +18,5 @@ pub use contracts::{bytes32_to_string, bytes_to_string, string_to_bytes, string_
 pub use contracts::{OracleCoordinator, OracleRegistry, ERC20, WETH};
 pub use contracts::{OracleKind, TaskStatus};
 
-/// Commands to interact with the oracle contracts.
-pub mod commands;
-
 /// External data storage, such as Arweave.
 pub mod storage;

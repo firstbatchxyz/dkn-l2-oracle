@@ -31,7 +31,8 @@ async fn test_weth_transfer() -> Result<()> {
     let bob_balance_before = node.get_token_balance(bob.address()).await?;
 
     // alice buys WETH
-    let _ = alice_token.deposit().value(amount).send().await?;
+    let call = alice_token.deposit().value(amount);
+    let _ = call.send().await?.get_receipt().await?;
     let alice_balance_after = node.get_token_balance(alice.address()).await?;
     assert_eq!(
         alice_balance_after.amount - alice_balance_before.amount,
@@ -39,13 +40,14 @@ async fn test_weth_transfer() -> Result<()> {
     );
 
     // alice approves bob
-    let _ = alice_token.approve(bob.address(), amount).send().await?;
+    let call = alice_token.approve(bob.address(), amount);
+    let _ = call.send().await?.get_receipt().await?;
 
     // bob transfers WETH from alice
-    let _ = bob_token
-        .transferFrom(alice.address(), bob.address(), amount)
-        .send()
-        .await?;
+    let call = bob_token.transferFrom(alice.address(), bob.address(), amount);
+    let _ = call.send().await?.get_receipt().await?;
+
+    // balances should be updated
     let alice_balance_after = node.get_token_balance(alice.address()).await?;
     let bob_balance_after = node.get_token_balance(bob.address()).await?;
     assert_eq!(alice_balance_after.amount, alice_balance_before.amount);

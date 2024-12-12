@@ -1,13 +1,20 @@
+use std::env;
+
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let dotenv_result = dotenvy::dotenv();
 
+    let default_log = if env::var("DEBUG").is_ok() {
+        log::LevelFilter::Debug
+    } else {
+        log::LevelFilter::Info
+    };
     env_logger::builder()
         .format_timestamp(Some(env_logger::TimestampPrecision::Millis))
         .filter(None, log::LevelFilter::Off)
-        .filter_module("dria_oracle", log::LevelFilter::Info)
-        .filter_module("dkn_workflows", log::LevelFilter::Info)
-        .parse_default_env() // reads RUST_LOG variable
+        .filter_module("dria_oracle", default_log)
+        .filter_module("dkn_workflows", default_log)
+        .parse_default_env()
         .init();
 
     // log about env usage
