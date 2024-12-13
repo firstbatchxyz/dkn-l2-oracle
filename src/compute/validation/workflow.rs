@@ -1,18 +1,22 @@
+use std::time::Duration;
+
 use dkn_workflows::Workflow;
 use serde_json::json;
 
 pub fn make_validation_workflow(
     instruction: String,
     mut generations: Vec<String>,
-) -> Result<Workflow, serde_json::Error> {
+) -> Result<(Workflow, Duration), serde_json::Error> {
     // workflow processes the array in reverse order, so we reverse the input outside
     // to get the correct order in results
     generations.reverse();
 
+    let max_time_sec = (generations.len() as u64) * 5 + 10; // we need at most few seconds per generation, plus some leeway here
+
     let workflow = json!({
         "config": {
             "max_steps": generations.len() + 5, // we need one step per generation, plus some leeway here
-            "max_time": generations.len() * 5 + 10, // we need at most few seconds per generation, plus some leeway here
+            "max_time": max_time_sec,
             "tools": ["ALL"],
             "max_tokens": 1000 // max tokens do not need to change
         },
@@ -98,5 +102,7 @@ pub fn make_validation_workflow(
         }
     });
 
-    serde_json::from_value(workflow)
+    let workflow = serde_json::from_value(workflow)?;
+
+    Ok((workflow, Duration::from_secs(max_time_sec)))
 }

@@ -40,12 +40,17 @@ pub async fn execute_validations(
     generations: Vec<String>,
     model: Model,
 ) -> Result<Vec<ValidationResult>> {
-    let workflow = make_validation_workflow(instruction, generations)?;
+    let (workflow, duration) = make_validation_workflow(instruction, generations)?;
 
     log::debug!("Executing validation request with: {}", model);
     let mut memory = ProgramMemory::new();
     let executor = Executor::new(model);
-    let result_str = executor.execute(None, &workflow, &mut memory).await?;
+    let result_str = tokio::select! {
+        result = executor.execute(None, &workflow, &mut memory) => result?,
+        _ = tokio::time::sleep(duration) => {
+            return Err(eyre::eyre!("Validation workflow timed out"));
+        }
+    };
 
     // first parse as vec of string
     // then parse each string as a ValidationResult

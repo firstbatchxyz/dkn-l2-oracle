@@ -1,10 +1,14 @@
+use std::time::Duration;
+
 use dkn_workflows::{MessageInput, Workflow};
 use serde_json::json;
+
+const MAX_TIME_SEC: u64 = 50;
 
 /// Creates a generation workflow with the given input.
 ///
 /// It is an alias for `make_chat_workflow` with a single message alone.
-pub fn make_generation_workflow(input: String) -> Result<Workflow, serde_json::Error> {
+pub fn make_generation_workflow(input: String) -> Result<(Workflow, Duration), serde_json::Error> {
     make_chat_workflow(Vec::new(), input)
 }
 
@@ -14,12 +18,15 @@ pub fn make_generation_workflow(input: String) -> Result<Workflow, serde_json::E
 pub fn make_chat_workflow(
     mut messages: Vec<MessageInput>,
     input: String,
-) -> Result<Workflow, serde_json::Error> {
+) -> Result<(Workflow, Duration), serde_json::Error> {
     // add the new input to the message history as a user message
     messages.push(MessageInput {
         role: "user".to_string(),
         content: input,
     });
+
+    // we do like this in-case a dynamic assign is needed
+    let max_time_sec = MAX_TIME_SEC;
 
     let workflow = json!({
         "config": {
@@ -67,5 +74,7 @@ pub fn make_chat_workflow(
         }
     });
 
-    serde_json::from_value(workflow)
+    let workflow = serde_json::from_value(workflow)?;
+
+    Ok((workflow, Duration::from_secs(max_time_sec)))
 }

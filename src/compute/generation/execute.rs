@@ -31,11 +31,13 @@ pub async fn execute_generation(
 
         // string requests are used with the generation workflow with a given prompt
         GenerationRequest::String(input) => {
-            let workflow = make_generation_workflow(input.clone())?;
-            executor
-                .execute(None, &workflow, &mut memory)
-                .await
-                .wrap_err("could not execute worfklow for string input")
+            let (workflow, duration) = make_generation_workflow(input.clone())?;
+            tokio::select! {
+                result = executor.execute(None, &workflow, &mut memory) => result.wrap_err("could not execute worfklow for string input"),
+                _ = tokio::time::sleep(duration) => {
+                    Err(eyre!("Generation workflow timed out"))
+                }
+            }
         }
 
         // chat history requests are used with the chat workflow
@@ -60,11 +62,14 @@ pub async fn execute_generation(
             };
 
             // prepare the workflow with chat history
-            let workflow = make_chat_workflow(history.clone(), chat_request.content.clone())?;
-            let output = executor
-                .execute(None, &workflow, &mut memory)
-                .await
-                .wrap_err("could not execute chat worfklow")?;
+            let (workflow, duration) =
+                make_chat_workflow(history.clone(), chat_request.content.clone())?;
+            let output = tokio::select! {
+                result = executor.execute(None, &workflow, &mut memory) => result.wrap_err("could not execute chat worfklow")?,
+                _ = tokio::time::sleep(duration) => {
+                    return Err(eyre!("Generation workflow timed out"));
+                }
+            };
 
             // append user input to chat history
             history.push(MessageInput {
