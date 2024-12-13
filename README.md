@@ -19,19 +19,16 @@ Install Dria Oracle Node with:
 cargo install --git https://github.com/firstbatchxyz/dria-oracle-node
 ```
 
-This will create a binary called `dria-oracle`. You can see the available commands with:
-
-```sh
-dria-oracle help
-```
-
 ## Setup
 
 Create an `.env` file by copying `.env.example`. You have to fill the following variables:
 
 - Get an RPC URL from a provider such as Alchemy or Infura, and set it as `RPC_URL`.
 - Provide an Ethereum wallet secret koy to `SECRET_KEY`, make sure it has funds to pay for gas and tokens.
-- Provide an Arweave wallet so that you can use Arweave for large results. Alternatively, dont provide a wallet but instead set `ARWEAVE_BYTE_LIMIT` to a very large value.
+
+Optionally, you can save gas costs using Arweave:
+
+- Provide an Arweave wallet so that you can use Arweave for large results. Alternatively, dont provide a wallet but instead set `ARWEAVE_BYTE_LIMIT` to a very large value. TODO: this should be done automatically if wallet does not exist
 
 As for the LLM providers:
 
@@ -41,6 +38,12 @@ As for the LLM providers:
 - If you are using OpenRouter, make sure you provide the `OPENROUTER_API_KEY`.
 
 ## Usage
+
+After installatioon, a binary called `dria-oracle` will be created. You can see the available commands with:
+
+```sh
+dria-oracle help
+```
 
 The CLI provides several methods to interact with the oracle contracts.
 
@@ -146,6 +149,12 @@ The `request` command takes the following options:
 > [!NOTE]
 >
 > Making a request from the Oracle node is mainly for testing purposes, and you are not expected to use this command at all. Furthermore, it is only used to make plaintext requests, instead of larger ones via Arweave or more complex ones via Workflows.
+
+There are 3 types of requests:
+
+- **String**: simple text
+- **Chat**: an object of the form `{history_id: number, content: string}` which uses a previous task as history; TODO: history > nextTaskId handled?
+- **Workflow**: a stringified Workflow object
 
 ## Development
 

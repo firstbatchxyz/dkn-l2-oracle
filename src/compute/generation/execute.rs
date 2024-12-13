@@ -56,7 +56,28 @@ pub async fn execute_generation(
                 // parse it as chat history output
                 let history_str = ArweaveStorage::parse_downloadable(&history_task.output).await?;
 
-                serde_json::from_str::<Vec<MessageInput>>(&history_str)?
+                // if its a previous message array, we can parse it directly
+                if let Ok(messages) = serde_json::from_str::<Vec<MessageInput>>(&history_str) {
+                    messages
+                } else {
+                    // otherwise, we can fallback to fetching input manually and creating a new history on-the-fly
+                    let request = node
+                        .get_task_request(U256::from(chat_request.history_id))
+                        .await?;
+                    let input = ArweaveStorage::parse_downloadable(&request.input).await?;
+
+                    // create a new history with the input
+                    vec![
+                        MessageInput {
+                            role: "user".to_string(),
+                            content: input,
+                        },
+                        MessageInput {
+                            role: "assistant".to_string(),
+                            content: history_str,
+                        },
+                    ]
+                }
             } else {
                 return Err(eyre!("node is required for chat history"));
             };
