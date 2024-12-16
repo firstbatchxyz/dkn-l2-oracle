@@ -64,6 +64,11 @@ async fn test_swan() -> Result<()> {
         assert!(balance_after.amount > balance_before.amount);
     }
 
+    // whitelist validator with impersonation
+    log::info!("Whitelisting validator");
+    node.anvil_whitelist_registry(validator.address()).await?;
+    assert!(node.is_whitelisted(validator.address()).await?);
+
     // register generator oracle
     log::info!("Registering generator");
     generator.register(OracleKind::Generator).await?;

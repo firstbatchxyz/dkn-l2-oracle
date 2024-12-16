@@ -77,24 +77,4 @@ impl DriaOracle {
         let is_whitelisted = registry.isWhitelisted(address).call().await?;
         Ok(is_whitelisted._0)
     }
-
-    /// Whitelists a given address, only callable by the owner.
-    pub async fn whitelist(&self, address: Address) -> Result<TransactionReceipt> {
-        let registry = OracleRegistry::new(self.addresses.registry, &self.provider);
-
-        let req = registry.addToWhitelist(vec![address]);
-        let tx = req
-            .send()
-            .await
-            .map_err(contract_error_report)
-            .wrap_err("could not add to whitelist")?;
-
-        log::info!("Hash: {:?}", tx.tx_hash());
-        let receipt = tx
-            .with_timeout(self.config.tx_timeout)
-            .get_receipt()
-            .await?;
-
-        Ok(receipt)
-    }
 }

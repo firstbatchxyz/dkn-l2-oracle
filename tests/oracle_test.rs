@@ -1,7 +1,6 @@
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::ext::AnvilApi,
 };
 use dkn_workflows::{DriaWorkflowsConfig, Model};
 use dria_oracle::{
@@ -9,8 +8,6 @@ use dria_oracle::{
     TaskStatus, WETH,
 };
 use eyre::Result;
-
-const REGISTRY_OWNER: Address = address!("2aA47BC684aEC9093AB9E85c2CB19052887c1Aee");
 
 #[tokio::test]
 async fn test_oracle_string_input() -> Result<()> {
@@ -54,15 +51,7 @@ async fn test_oracle_string_input() -> Result<()> {
 
     // whitelist validator with impersonation
     log::info!("Whitelisting validator");
-    node.provider
-        .anvil_impersonate_account(REGISTRY_OWNER)
-        .await?;
-    node.provider.anvil_mine(Some(U256::from(1)), None).await?;
-    node.whitelist(validator.address()).await?;
-    node.provider
-        .anvil_stop_impersonating_account(REGISTRY_OWNER)
-        .await?;
-
+    node.anvil_whitelist_registry(validator.address()).await?;
     assert!(node.is_whitelisted(validator.address()).await?);
 
     // register validator oracle
