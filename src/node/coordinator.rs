@@ -3,14 +3,13 @@ use super::{DriaOracle, DriaOracleProviderTransport};
 use crate::contracts::*;
 use alloy::contract::EventPoller;
 use alloy::eips::BlockNumberOrTag;
+use alloy::primitives::aliases::U40;
 use alloy::primitives::{Bytes, U256};
 use alloy::rpc::types::{Log, TransactionReceipt};
 use eyre::{eyre, Context, Result};
+use LLMOracleTask::{TaskResponse, TaskValidation};
 use OracleCoordinator::LLMOracleTaskParameters;
-use OracleCoordinator::{
-    getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate, TaskResponse,
-    TaskValidation,
-};
+use OracleCoordinator::{getResponsesReturn, getValidationsReturn, requestsReturn, StatusUpdate};
 
 impl DriaOracle {
     /// Request an oracle task. This is not done by the oracle normally, but we have it added for testing purposes.
@@ -27,8 +26,8 @@ impl DriaOracle {
 
         let parameters = LLMOracleTaskParameters {
             difficulty,
-            numGenerations: num_gens,
-            numValidations: num_vals,
+            numGenerations: U40::from(num_gens),
+            numValidations: U40::from(num_vals),
         };
         let req = coordinator.request(string_to_bytes32(protocol)?, input, models, parameters);
         let tx = req
@@ -189,8 +188,8 @@ impl DriaOracle {
 
         let parameters = LLMOracleTaskParameters {
             difficulty,
-            numGenerations: num_gens,
-            numValidations: num_vals,
+            numGenerations: U40::from(num_gens),
+            numValidations: U40::from(num_vals),
         };
 
         let fees = coordinator.getFee(parameters).call().await?;

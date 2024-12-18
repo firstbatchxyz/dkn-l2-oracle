@@ -1,8 +1,11 @@
-mod handlers;
-pub use handlers::*;
+mod handler;
+pub use handler::handle_request;
 
 mod nonce;
 pub use nonce::mine_nonce;
 
-mod workflows;
-pub use workflows::*;
+mod generation;
+pub use generation::handle_generation;
+
+pub mod validation;
+pub use validation::handle_validation;

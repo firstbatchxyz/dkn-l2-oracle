@@ -1,6 +1,5 @@
 use alloy::contract::Error;
 use alloy::primitives::utils::format_ether;
-use alloy::transports::RpcError;
 use eyre::{eyre, ErrReport};
 
 use super::OracleCoordinator::OracleCoordinatorErrors;
@@ -19,6 +18,9 @@ pub fn contract_error_report(error: Error) -> ErrReport {
             "Unknown function: function with selector {} does not exist",
             selector
         ),
+        Error::PendingTransactionError(tx) => {
+            eyre!("Transaction is pending: {:?}", tx)
+        }
         Error::NotADeploymentTransaction => {
             eyre!("Transaction is not a deployment transaction")
         }
@@ -27,7 +29,7 @@ pub fn contract_error_report(error: Error) -> ErrReport {
         Error::TransportError(error) => {
             // here we try to parse the error w.r.t provided contract interfaces
             // or return a default one in the end if it was not parsed successfully
-            if let RpcError::ErrorResp(payload) = error {
+            if let Some(payload) = error.as_error_resp() {
                 payload
                     .as_decoded_error(false)
                     .map(ERC20Errors::into)
@@ -41,7 +43,7 @@ pub fn contract_error_report(error: Error) -> ErrReport {
                             .as_decoded_error(false)
                             .map(OracleCoordinatorErrors::into)
                     })
-                    .unwrap_or(eyre!("Unhandled contract error: {}", payload))
+                    .unwrap_or(eyre!("Unhandled contract error: {:#?}", error))
             } else {
                 eyre!("Unknown transport error: {:#?}", error)
             }
@@ -89,8 +91,41 @@ impl From<OracleRegistryErrors> for ErrReport {
             }
             OracleRegistryErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
+            } // _ => eyre!("Unhandled Oracle registry error"),
+            OracleRegistryErrors::TooEarlyToUnregister(e) => {
+                eyre!(
+                    "Too early to unregister: {} secs remaining",
+                    e.minTimeToWait
+                )
             }
-            _ => eyre!("Unhandled Oracle registry error"),
+            OracleRegistryErrors::NotWhitelisted(e) => {
+                eyre!("Validator {} is not whitelisted", e.validator)
+            }
+            // generic
+            OracleRegistryErrors::FailedCall(_) => {
+                eyre!("Failed call",)
+            }
+            OracleRegistryErrors::ERC1967InvalidImplementation(e) => {
+                eyre!("Invalid implementation: {}", e.implementation)
+            }
+            OracleRegistryErrors::UUPSUnauthorizedCallContext(_) => {
+                eyre!("Unauthorized UUPS call context",)
+            }
+            OracleRegistryErrors::UUPSUnsupportedProxiableUUID(e) => {
+                eyre!("Unsupported UUPS proxiable UUID: {}", e.slot)
+            }
+            OracleRegistryErrors::ERC1967NonPayable(_) => {
+                eyre!("ERC1967 Non-payable")
+            }
+            OracleRegistryErrors::InvalidInitialization(_) => {
+                eyre!("Invalid initialization")
+            }
+            OracleRegistryErrors::AddressEmptyCode(e) => {
+                eyre!("Address {} is empty", e.target)
+            }
+            OracleRegistryErrors::NotInitializing(_) => {
+                eyre!("Not initializing",)
+            }
         }
     }
 }
@@ -133,7 +168,31 @@ impl From<OracleCoordinatorErrors> for ErrReport {
             OracleCoordinatorErrors::OwnableUnauthorizedAccount(e) => {
                 eyre!("Unauthorized account: {}", e.account)
             }
-            _ => eyre!("Unhandled Oracle coordinator error"),
+            // generic
+            OracleCoordinatorErrors::FailedInnerCall(_) => {
+                eyre!("Failed inner call",)
+            }
+            OracleCoordinatorErrors::ERC1967InvalidImplementation(e) => {
+                eyre!("Invalid implementation: {}", e.implementation)
+            }
+            OracleCoordinatorErrors::UUPSUnauthorizedCallContext(_) => {
+                eyre!("Unauthorized UUPS call context",)
+            }
+            OracleCoordinatorErrors::UUPSUnsupportedProxiableUUID(e) => {
+                eyre!("Unsupported UUPS proxiable UUID: {}", e.slot)
+            }
+            OracleCoordinatorErrors::ERC1967NonPayable(_) => {
+                eyre!("ERC1967 Non-payable")
+            }
+            OracleCoordinatorErrors::InvalidInitialization(_) => {
+                eyre!("Invalid initialization")
+            }
+            OracleCoordinatorErrors::AddressEmptyCode(e) => {
+                eyre!("Address {} is empty", e.target)
+            }
+            OracleCoordinatorErrors::NotInitializing(_) => {
+                eyre!("Not initializing",)
+            }
         }
     }
 }
@@ -152,9 +211,9 @@ mod tests {
         // tries to register if registered, or opposite, to trigger an error
         const KIND: OracleKind = OracleKind::Generator;
         let result = if node.is_registered(KIND).await? {
-            node.register(KIND).await
+            node.register_kind(KIND).await
         } else {
-            node.unregister(KIND).await
+            node.unregister_kind(KIND).await
         };
         assert!(result.is_err());
 

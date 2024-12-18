@@ -6,18 +6,12 @@ use alloy::rpc::types::TransactionReceipt;
 use dkn_workflows::DriaWorkflowsConfig;
 use eyre::Result;
 
-mod generation;
-use generation::*;
-
-mod validation;
-use validation::*;
+use super::{handle_generation, handle_validation};
 
 /// Handles a task request.
 ///
 /// - Generation tasks are forwarded to `handle_generation`
 /// - Validation tasks are forwarded to `handle_validation`
-///
-///
 pub async fn handle_request(
     node: &DriaOracle,
     kinds: &[OracleKind],
@@ -26,6 +20,7 @@ pub async fn handle_request(
 ) -> Result<Option<TransactionReceipt>> {
     log::debug!("Received event for task {} ()", event.taskId);
 
+    // we check the `statusAfter` field of the event, which indicates the final status of the listened task
     let response_tx_hash = match TaskStatus::try_from(event.statusAfter)? {
         TaskStatus::PendingGeneration => {
             if kinds.contains(&OracleKind::Generator) {
@@ -40,7 +35,7 @@ pub async fn handle_request(
         }
         TaskStatus::PendingValidation => {
             if kinds.contains(&OracleKind::Validator) {
-                handle_validation(node, workflows, event.taskId).await?
+                handle_validation(node, event.taskId).await?
             } else {
                 log::debug!(
                     "Ignoring generation task {} as you are not validator.",
@@ -49,12 +44,13 @@ pub async fn handle_request(
                 return Ok(None);
             }
         }
-        TaskStatus::None => {
-            log::error!("None status received in an event: {}", event.taskId);
-            return Ok(None);
-        }
         TaskStatus::Completed => {
             log::debug!("Task {} is completed.", event.taskId);
+            return Ok(None);
+        }
+        // this is kind of unexpected, but we dont have to return an error just for this
+        TaskStatus::None => {
+            log::error!("None status received in an event: {}", event.taskId);
             return Ok(None);
         }
     };

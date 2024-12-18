@@ -1,9 +1,9 @@
 use alloy::{eips::BlockNumberOrTag, primitives::utils::parse_ether};
-use dkn_oracle::{
-    bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
-    OracleKind, TaskStatus, WETH,
-};
 use dkn_workflows::{DriaWorkflowsConfig, Model};
+use dria_oracle::{
+    bytes_to_string, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig, OracleKind,
+    TaskStatus, WETH,
+};
 use eyre::Result;
 
 #[tokio::test]
@@ -12,7 +12,7 @@ async fn test_oracle_string_input() -> Result<()> {
 
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Off)
-        .filter_module("dkn_oracle", log::LevelFilter::Debug)
+        .filter_module("dria_oracle", log::LevelFilter::Debug)
         .filter_module("oracle_test", log::LevelFilter::Debug)
         .is_test(true)
         .try_init();
@@ -38,18 +38,26 @@ async fn test_oracle_string_input() -> Result<()> {
     for node in [&requester, &generator, &validator] {
         let token = WETH::new(node.addresses.token, &node.provider);
         let balance_before = node.get_token_balance(node.address()).await?;
-        let _ = token.deposit().value(amount).send().await?;
+
+        let call = token.deposit().value(amount);
+        let _ = call.send().await?.get_receipt().await?;
+
         let balance_after = node.get_token_balance(node.address()).await?;
         assert!(balance_after.amount > balance_before.amount);
     }
 
-    // register generator oracle
-    commands::register(&generator, OracleKind::Generator).await?;
-    assert!(generator.is_registered(OracleKind::Generator).await?);
+    // whitelist validator with impersonation
+    log::info!("Whitelisting validator");
+    node.anvil_whitelist_registry(validator.address()).await?;
+    assert!(node.is_whitelisted(validator.address()).await?);
 
     // register validator oracle
-    commands::register(&validator, OracleKind::Validator).await?;
+    validator.register(OracleKind::Validator).await?;
     assert!(validator.is_registered(OracleKind::Validator).await?);
+
+    // register generator oracle
+    generator.register(OracleKind::Generator).await?;
+    assert!(generator.is_registered(OracleKind::Generator).await?);
 
     // approve some tokens for the coordinator from requester
     requester

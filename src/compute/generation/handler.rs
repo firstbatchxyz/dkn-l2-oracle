@@ -1,8 +1,9 @@
 use crate::{
-    compute::Request,
+    compute::generation::execute::execute_generation,
     contracts::{bytes32_to_string, bytes_to_string},
-    data::Arweave,
-    mine_nonce, DriaOracle,
+    mine_nonce,
+    storage::ArweaveStorage,
+    DriaOracle,
 };
 use alloy::{
     primitives::{FixedBytes, U256},
@@ -10,6 +11,9 @@ use alloy::{
 };
 use dkn_workflows::DriaWorkflowsConfig;
 use eyre::{Context, Result};
+
+use super::postprocess::*;
+use super::request::GenerationRequest;
 
 /// Handles a generation request.
 ///
@@ -52,22 +56,33 @@ pub async fn handle_generation(
 
     // execute task
     log::debug!("Executing the workflow");
-    let mut input = Request::try_parse_bytes(&request.input).await?;
-    let output = input.execute(model, Some(node)).await?;
+    let input = GenerationRequest::try_parse_bytes(&request.input).await?;
+    let output = execute_generation(&input, model, Some(node)).await?;
     log::debug!("Output: {}", output);
 
     // post-processing
-    log::debug!("Post-processing the output");
-    let (output, metadata, use_storage) = Request::post_process(output, &protocol_string).await?;
+    log::debug!(
+        "Post-processing the output for protocol: {}",
+        protocol_string
+    );
+    let (output, metadata, use_storage) =
+        match protocol_string.split('/').next().unwrap_or_default() {
+            SwanPurchasePostProcessor::PROTOCOL => {
+                SwanPurchasePostProcessor::new("<shop_list>", "</shop_list>").post_process(output)
+            }
+            _ => IdentityPostProcessor.post_process(output),
+        }?;
 
     // uploading to storage
-    log::debug!("Uploading output to storage");
-    let arweave = Arweave::new_from_env()?;
+    let arweave = ArweaveStorage::new_from_env()?;
     let output = if use_storage {
+        log::debug!("Uploading output to storage");
         arweave.put_if_large(output).await?
     } else {
+        log::debug!("Not uploading output to storage");
         output
     };
+    log::debug!("Uploading metadata to storage");
     let metadata = arweave.put_if_large(metadata).await?;
 
     // mine nonce

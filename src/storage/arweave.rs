@@ -1,39 +1,12 @@
-use super::traits::OracleExternalData;
+use crate::bytes_to_string;
+
+use super::traits::IsExternalStorage;
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use base64::prelude::*;
 use bundlr_sdk::{currency::arweave::ArweaveBuilder, tags::Tag, BundlrBuilder};
 use eyre::{eyre, Context, Result};
 use reqwest::{Client, Url};
 use std::{env, path::PathBuf};
-
-/// An upload response.
-///
-/// ```js
-/// {
-///  block: 1513928,
-///  deadlineHeight: 1513928,
-///  id: '<base64-string>',
-///  public: '<base64-string>',
-///  signature: '<base64-string>',
-///  timestamp: 1726753873618,
-///  validatorSignatures: [],
-///  version: '1.0.0'
-///}
-///```
-#[derive(Debug, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[allow(unused)]
-struct UploadResponse {
-    block: u64,
-    deadline_height: u64,
-    id: String,
-    public: String,
-    signature: String,
-    timestamp: u64,
-    validator_signatures: Vec<String>,
-    version: String,
-}
 
 const DEFAULT_BASE_URL: &str = "https://node1.bundlr.network"; // "https://gateway.irys.xyz";
 const DEFAULT_WALLET_PATH: &str = "./secrets/wallet.json";
@@ -43,14 +16,14 @@ const DEFAULT_BYTE_LIMIT: usize = 1024; // 1KB
 ///
 /// - `put` corresponds to uploading (via Irys)
 /// - `get` corresponds to downloading
-pub struct Arweave {
+pub struct ArweaveStorage {
     /// Path to Arweave keypair (usually JSON)
     wallet: PathBuf,
     /// Base URL for Arweave gateway, e.g:
-    /// - https://gateway.irys.xyz
-    /// - https://node1.bundlr.network
+    /// - <https://gateway.irys.xyz>
+    /// - <https://node1.bundlr.network>
     base_url: Url,
-    /// Reqwest client.
+    /// Reqwest client for downloads.
     client: Client,
     /// Byte limit for the data to be considered for Arweave.
     ///
@@ -59,7 +32,13 @@ pub struct Arweave {
     byte_limit: usize,
 }
 
-impl Arweave {
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+pub struct ArweaveKey {
+    /// The base64url encoded key, can be used to download data directly.
+    pub arweave: String,
+}
+
+impl ArweaveStorage {
     /// Creates a new Arweave instance.
     pub fn new(base_url: &str, wallet: &str, byte_limit: usize) -> Result<Self> {
         Ok(Self {
@@ -68,6 +47,27 @@ impl Arweave {
             client: Client::new(),
             byte_limit,
         })
+    }
+
+    /// Parses a given bytes input to a string,
+    /// and if it is a storage key identifier it automatically downloads the data from Arweave.
+    pub async fn parse_downloadable(input_bytes: &Bytes) -> Result<String> {
+        // first, convert to string
+        let mut input_string = bytes_to_string(input_bytes)?;
+
+        // then, check storage
+        if let Some(key) = ArweaveStorage::is_key(&input_string) {
+            // if its a txid, we download the data and parse it again
+            let input_bytes_from_arweave = ArweaveStorage::default()
+                .get(key)
+                .await
+                .wrap_err("could not download from Arweave")?;
+
+            // convert the input to string
+            input_string = bytes_to_string(&input_bytes_from_arweave)?;
+        }
+
+        Ok(input_string)
     }
 
     /// Creates a new Arweave instance from the environment variables.
@@ -90,28 +90,6 @@ impl Arweave {
         Self::new(&base_url, &wallet, byte_limit)
     }
 
-    /// Converts a base64 key string to hexadecimal string.
-    ///
-    /// Arweave uses base64 for keys but they are 32 bytes,
-    /// we want to use hexadecimals to read them easily on-chain.
-    #[inline(always)]
-    pub fn base64_to_hex(key: &str) -> Result<String> {
-        let decoded_key = BASE64_URL_SAFE_NO_PAD
-            .decode(key.as_bytes())
-            .wrap_err("could not decode base64 url")?;
-        Ok(hex::encode(decoded_key))
-    }
-
-    /// Converts a hexadecimal key string to base64 string.
-    ///
-    /// Arweave uses base64 for keys but they are 32 bytes,
-    /// we want to use hexadecimals to read them easily on-chain.
-    #[inline(always)]
-    pub fn hex_to_base64(key: &str) -> Result<String> {
-        let decoded_key = hex::decode(key).wrap_err("could not decode hexadecimals")?;
-        Ok(BASE64_URL_SAFE_NO_PAD.encode(&decoded_key))
-    }
-
     /// Puts the value if it is larger than the byte limit.
     #[inline]
     pub async fn put_if_large(&self, value: Bytes) -> Result<Bytes> {
@@ -123,14 +101,15 @@ impl Arweave {
                 self.byte_limit
             );
             let key = self.put(value.clone()).await?;
-            Ok(key.into())
+            let key_str = serde_json::to_string(&key).wrap_err("could not serialize key")?;
+            Ok(key_str.into())
         } else {
             Ok(value)
         }
     }
 }
 
-impl Default for Arweave {
+impl Default for ArweaveStorage {
     fn default() -> Self {
         Self::new(DEFAULT_BASE_URL, DEFAULT_WALLET_PATH, DEFAULT_BYTE_LIMIT)
             .expect("Failed to create Default Arweave instance")
@@ -138,17 +117,13 @@ impl Default for Arweave {
 }
 
 #[async_trait(?Send)]
-impl OracleExternalData for Arweave {
-    type Key = String;
+impl IsExternalStorage for ArweaveStorage {
+    type Key = ArweaveKey;
     type Value = Bytes;
 
     async fn get(&self, key: Self::Key) -> Result<Self::Value> {
-        if !Self::is_key(key.clone()) {
-            return Err(eyre!("Invalid key for Arweave"));
-        }
-        let b64_key = Self::hex_to_base64(key.as_str())?;
+        let url = self.base_url.join(&key.arweave)?;
 
-        let url = self.base_url.join(&b64_key)?;
         log::debug!("Fetching from Arweave: {}", url);
         let response = self
             .client
@@ -166,6 +141,20 @@ impl OracleExternalData for Arweave {
     }
 
     async fn put(&self, value: Self::Value) -> Result<Self::Key> {
+        #[derive(Debug, serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        #[allow(unused)]
+        struct UploadResponse {
+            block: u64,
+            deadline_height: u64,
+            id: String,
+            public: String,
+            signature: String,
+            timestamp: u64,
+            validator_signatures: Vec<String>,
+            version: String,
+        }
+
         // ensure that wallet exists
         // NOTE: we do this here instead of `new` so that we can work without any wallet
         // in case we only want to download data.
@@ -202,14 +191,20 @@ impl OracleExternalData for Arweave {
         log::info!("Uploaded at {}", self.base_url.join(&res.id)?);
 
         // the key is in base64 format, we want to convert that to hexadecimals
-        let key = Self::base64_to_hex(&res.id)?;
-        Ok(key)
+        Ok(ArweaveKey { arweave: res.id })
     }
 
-    /// Check if key is 64-characters and hex.
+    /// Check if key is an Arweave key, which is a JSON object of type `{arweave: string}`
+    /// where the `arweave` field contains the base64url encoded txid.
+    ///
+    /// For example:
+    ///
+    /// ```json
+    /// { arweave: "Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA" }
+    /// ```
     #[inline(always)]
-    fn is_key(key: Self::Key) -> bool {
-        key.len() == 64 && key.chars().all(|c| c.is_ascii_hexdigit())
+    fn is_key(key: &str) -> Option<Self::Key> {
+        serde_json::from_str::<ArweaveKey>(key).ok()
     }
 
     fn describe() -> String {
@@ -225,10 +220,11 @@ mod tests {
     #[ignore = "run manually"]
     async fn test_download_data() -> Result<()> {
         // https://gateway.irys.xyz/Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA
-        let key = Arweave::base64_to_hex("Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA")?;
-        let arweave = Arweave::default();
+        let tx_id = "Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA".to_string();
+        let key = ArweaveKey { arweave: tx_id };
+        let arweave = ArweaveStorage::default();
 
-        let result = arweave.get(key.to_string()).await?;
+        let result = arweave.get(key).await?;
         let val = serde_json::from_slice::<String>(&result)?;
         assert_eq!(val, "Hello, Arweave!");
 
@@ -238,29 +234,16 @@ mod tests {
     #[tokio::test]
     #[ignore = "run manually with Arweave wallet"]
     async fn test_upload_and_download_data() -> Result<()> {
-        let arweave = Arweave::default();
+        let arweave = ArweaveStorage::default();
         let input = b"Hi there Im a test data".to_vec();
 
         // put data
         let key = arweave.put(input.clone().into()).await?;
-        // println!("Uploaded at \n{}", arweave.base_url.join(&key)?);
+        println!("{:?}", key);
 
         // get it again
-        let result = arweave.get(key.to_string()).await?;
+        let result = arweave.get(key).await?;
         assert_eq!(input, result);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_key_conversions() -> Result<()> {
-        let key_b64 = "Zg6CZYfxXCWYnCuKEpnZCYfy7ghit1_v4-BCe53iWuA";
-
-        let key_hex = Arweave::base64_to_hex(key_b64)?;
-        assert!(Arweave::is_key(key_hex.clone()));
-
-        let key_b64_again = Arweave::hex_to_base64(&key_hex)?;
-        assert_eq!(key_b64, key_b64_again);
 
         Ok(())
     }

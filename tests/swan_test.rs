@@ -3,18 +3,23 @@ use alloy::{
     primitives::{utils::parse_ether, Address},
     sol_types::SolValue,
 };
-use dkn_oracle::{
-    bytes_to_string, commands, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig,
-    OracleKind, TaskStatus, WETH,
-};
 use dkn_workflows::{DriaWorkflowsConfig, Model};
+use dria_oracle::{
+    bytes_to_string, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig, OracleKind,
+    TaskStatus, WETH,
+};
 use eyre::Result;
-
-// TODO: move this to Swan post-process file
 
 #[tokio::test]
 async fn test_swan() -> Result<()> {
     dotenvy::dotenv().unwrap();
+
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Off)
+        .filter_module("dria_oracle", log::LevelFilter::Debug)
+        .filter_module("swan_test", log::LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
 
     // task setup
     let difficulty = 1;
@@ -33,7 +38,7 @@ async fn test_swan() -> Result<()> {
         .to_string(),
     );
 
-    println!("Input: {}", bytes_to_string(&input)?);
+    log::info!("Input: {}", bytes_to_string(&input)?);
 
     // node setup
     let workflows = DriaWorkflowsConfig::new(vec![Model::GPT4Turbo]);
@@ -46,21 +51,32 @@ async fn test_swan() -> Result<()> {
     let validator = node.connect(node.anvil_funded_wallet(None).await?);
 
     // buy some WETH for all people
+    log::info!("Buying WETH for all accounts");
     let amount = parse_ether("100").unwrap();
     for node in [&requester, &generator, &validator] {
-        let token = WETH::new(node.addresses.token, &node.provider);
         let balance_before = node.get_token_balance(node.address()).await?;
-        let _ = token.deposit().value(amount).send().await?;
+
+        let token = WETH::new(node.addresses.token, &node.provider);
+        let call = token.deposit().value(amount);
+        let _ = call.send().await?.get_receipt().await?;
+
         let balance_after = node.get_token_balance(node.address()).await?;
         assert!(balance_after.amount > balance_before.amount);
     }
 
+    // whitelist validator with impersonation
+    log::info!("Whitelisting validator");
+    node.anvil_whitelist_registry(validator.address()).await?;
+    assert!(node.is_whitelisted(validator.address()).await?);
+
     // register generator oracle
-    commands::register(&generator, OracleKind::Generator).await?;
+    log::info!("Registering generator");
+    generator.register(OracleKind::Generator).await?;
     assert!(generator.is_registered(OracleKind::Generator).await?);
 
     // register validator oracle
-    commands::register(&validator, OracleKind::Validator).await?;
+    log::info!("Registering validator");
+    validator.register(OracleKind::Validator).await?;
     assert!(validator.is_registered(OracleKind::Validator).await?);
 
     // approve some tokens for the coordinator from requester

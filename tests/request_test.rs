@@ -4,14 +4,21 @@
 //! 2. Requester requests a task with a given input, models, difficulty, num_gens, and num_vals.
 //! 3. The task is created in the coordinator contract.
 
-use alloy::primitives::utils::parse_ether;
-use dkn_oracle::{bytes_to_string, commands, DriaOracle, DriaOracleConfig, WETH};
+use alloy::primitives::{aliases::U40, utils::parse_ether};
 use dkn_workflows::Model;
+use dria_oracle::{bytes_to_string, DriaOracle, DriaOracleConfig, WETH};
 use eyre::Result;
 
 #[tokio::test]
 async fn test_request() -> Result<()> {
     dotenvy::dotenv().unwrap();
+
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Off)
+        .filter_module("dria_oracle", log::LevelFilter::Debug)
+        .filter_module("request_test", log::LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
 
     // task setup
     let (difficulty, num_gens, num_vals) = (1, 1, 1);
@@ -30,17 +37,16 @@ async fn test_request() -> Result<()> {
 
     // request a task, and see it in the coordinator
     let task_id = node.get_next_task_id().await?;
-    commands::request_task(
-        &requester, &input, models, difficulty, num_gens, num_vals, protocol,
-    )
-    .await?;
+    requester
+        .request_task(&input, models, difficulty, num_gens, num_vals, protocol)
+        .await?;
 
     // get the task info
     let (request, _, _) = node.get_task(task_id).await?;
     assert_eq!(input, bytes_to_string(&request.input).unwrap());
     assert_eq!(difficulty, request.parameters.difficulty);
-    assert_eq!(num_gens, request.parameters.numGenerations);
-    assert_eq!(num_vals, request.parameters.numValidations);
+    assert_eq!(U40::from(num_gens), request.parameters.numGenerations);
+    assert_eq!(U40::from(num_vals), request.parameters.numValidations);
 
     Ok(())
 }

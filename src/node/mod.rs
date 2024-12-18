@@ -8,7 +8,7 @@ mod anvil;
 use super::DriaOracleConfig;
 use crate::contracts::*;
 use alloy::providers::fillers::{
-    ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
+    BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
 };
 use alloy::providers::WalletProvider;
 use alloy::{
@@ -25,7 +25,10 @@ use std::env;
 type DriaOracleProviderTransport = Http<Client>;
 type DriaOracleProvider = FillProvider<
     JoinFill<
-        JoinFill<JoinFill<JoinFill<Identity, GasFiller>, NonceFiller>, ChainIdFiller>,
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
         WalletFiller<EthereumWallet>,
     >,
     RootProvider<DriaOracleProviderTransport>,
