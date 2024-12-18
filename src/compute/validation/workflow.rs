@@ -73,9 +73,7 @@ pub fn make_validation_workflow(
                     "content": ""
                 }
                 ],
-                "inputs": [],
-                "operator": "end",
-                "outputs": []
+                "operator": "end"
             }
         ],
         "steps": [

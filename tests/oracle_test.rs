@@ -1,7 +1,4 @@
-use alloy::{
-    eips::BlockNumberOrTag,
-    primitives::{address, utils::parse_ether, Address, U256},
-};
+use alloy::{eips::BlockNumberOrTag, primitives::utils::parse_ether};
 use dkn_workflows::{DriaWorkflowsConfig, Model};
 use dria_oracle::{
     bytes_to_string, handle_request, string_to_bytes, DriaOracle, DriaOracleConfig, OracleKind,

@@ -20,10 +20,7 @@ pub fn make_chat_workflow(
     input: String,
 ) -> Result<(Workflow, Duration), serde_json::Error> {
     // add the new input to the message history as a user message
-    messages.push(MessageInput {
-        role: "user".to_string(),
-        content: input,
-    });
+    messages.push(MessageInput::new_user_message(input));
 
     // we do like this in-case a dynamic assign is needed
     let max_time_sec = MAX_TIME_SEC;
@@ -41,7 +38,6 @@ pub fn make_chat_workflow(
                 "description": "Expects an array of messages for generation",
                 "operator": "generation",
                 "messages": messages,
-                "inputs": [],
                 "outputs": [
                     {
                         "type": "write",
@@ -52,20 +48,11 @@ pub fn make_chat_workflow(
             },
             {
                 "id": "__end",
-                "name": "end",
-                "description": "End of the task",
                 "operator": "end",
                 "messages": [{ "role": "user", "content": "End of the task" }],
-                "inputs": [],
-                "outputs": []
             }
         ],
-        "steps": [
-            {
-                "source": "A",
-                "target": "__end"
-            }
-        ],
+        "steps": [ { "source": "A", "target": "__end" } ],
         "return_value": {
             "input": {
                 "type": "read",

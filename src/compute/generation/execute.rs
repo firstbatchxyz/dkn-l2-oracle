@@ -68,14 +68,8 @@ pub async fn execute_generation(
 
                     // create a new history with the input
                     vec![
-                        MessageInput {
-                            role: "user".to_string(),
-                            content: input,
-                        },
-                        MessageInput {
-                            role: "assistant".to_string(),
-                            content: history_str,
-                        },
+                        MessageInput::new_user_message(input),
+                        MessageInput::new_assistant_message(history_str),
                     ]
                 }
             } else {
@@ -93,10 +87,7 @@ pub async fn execute_generation(
             };
 
             // append user input to chat history
-            history.push(MessageInput {
-                role: "assistant".to_string(),
-                content: output,
-            });
+            history.push(MessageInput::new_assistant_message(output));
 
             // return the stringified output
             let out =
