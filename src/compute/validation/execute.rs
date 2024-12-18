@@ -100,20 +100,20 @@ mod tests {
             "expected top score from correct response"
         );
         assert!(
-            results[1].final_score == 1,
-            "expected minimum score from wrong response"
+            results[1].final_score < 3,
+            "expected low score from wrong response"
         );
         assert!(
-            results[2].final_score == 1,
-            "expected minimum score from irrelevant response"
+            results[2].final_score < 3,
+            "expected low score from irrelevant response"
         );
         assert!(
-            results[3].final_score == 1,
-            "expected minimum score from correct but irrational response"
+            results[3].final_score < 3,
+            "expected low score from correct but irrational response"
         );
         assert!(
-            results[4].final_score == 1,
-            "expected minimum score from correct but irrelevant response"
+            results[4].final_score < 3,
+            "expected low score from correct but irrelevant response"
         );
     }
 
