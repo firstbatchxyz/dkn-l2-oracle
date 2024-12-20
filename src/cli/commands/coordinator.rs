@@ -153,7 +153,7 @@ impl DriaOracle {
         );
 
         // handle request
-        match handle_request(self, &kinds, &model_config, event).await {
+        match handle_request(self, kinds, model_config, event).await {
             Ok(Some(receipt)) => {
                 log::info!(
                     "Task {} processed successfully. (tx: {})",
@@ -195,7 +195,7 @@ impl DriaOracle {
                 task_id,
                 log.transaction_hash.unwrap_or_default()
             );
-            match handle_request(self, &kinds, model_config, event).await {
+            match handle_request(self, kinds, model_config, event).await {
                 Ok(Some(receipt)) => {
                     log::info!(
                         "Task {} processed successfully. (tx: {})",
